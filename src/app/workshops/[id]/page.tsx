@@ -1,5 +1,5 @@
 "use client";
-import {useCallback,useEffect,useState} from "react";
+import {useCallback,useEffect,useState,type FormEvent} from "react";
 import Link from "next/link";
 import {useParams,useRouter} from "next/navigation";
 import {supabase} from "@/lib/supabase";
@@ -19,7 +19,9 @@ export default function WorkshopPage(){
  const[timers]=useState(()=>({current:{} as Record<string,ReturnType<typeof setTimeout>>}));
  const[stage,setStage]=useState(1);const[scope,setScope]=useState<"group"|"individual">("group");
  const[selectedGroup,setSelectedGroup]=useState("");const[groupName,setGroupName]=useState("");
- const[inviteCode,setInviteCode]=useState("");const[rotatedCode,setRotatedCode]=useState("");
+ const[platformAdmin,setPlatformAdmin]=useState(false);
+ const[participantEmail,setParticipantEmail]=useState("");const[participantPhone,setParticipantPhone]=useState("");
+ const[whatsAppUrl,setWhatsAppUrl]=useState("");
  const[showResults,setShowResults]=useState(false);const[busy,setBusy]=useState(false);const[loading,setLoading]=useState(true);
  const[error,setError]=useState("");const[notice,setNotice]=useState("");
 
@@ -27,16 +29,16 @@ export default function WorkshopPage(){
   const {data:auth,error:authError}=await supabase.auth.getUser();
   if(authError||!auth.user){router.replace("/login?next="+encodeURIComponent(window.location.pathname+window.location.search));return;}
   const uid=auth.user.id;setUserId(uid);
+  const adminResult=await supabase.rpc("planning_is_platform_admin");
+  if(adminResult.error)throw adminResult.error;
+  setPlatformAdmin(adminResult.data===true);
   const preferredName=String(auth.user.user_metadata?.full_name || auth.user.email?.split("@")[0] || "مشارك");
   const name=preferredName.trim().length>=2?preferredName.trim().slice(0,120):"مشارك";
   const ownProfile=await supabase.from("planning_profiles").upsert({id:uid,full_name:name},{onConflict:"id"});
   if(ownProfile.error)throw ownProfile.error;
-  const invite=new URLSearchParams(window.location.search).get("code");
-  if(invite){
-   const joining=await supabase.rpc("planning_join_by_code",{p_code:invite});
-   if(joining.error)throw joining.error;
-   if(joining.data!==id)throw Error("رمز الدعوة يخص ورشة مختلفة.");
+  if(new URLSearchParams(window.location.search).has("code")){
    window.history.replaceState(null,"",window.location.pathname);
+   setNotice("انتهت صلاحية روابط الدعوة العامة. يضيف مدير بوصلة المشاركين مباشرة.");
   }
   const w=await supabase.from("planning_workshops")
    .select("id,organization_id,title,planning_year,workshop_date,created_by,open_stages,allow_individual,vote_open,status")
@@ -99,15 +101,28 @@ export default function WorkshopPage(){
   setBusy(true);setError("");try{const r=await supabase.from("planning_participants").update(patch).eq("id",p.id);
    if(r.error)throw r.error;await reload();
   }catch(e){setError(err(e));}finally{setBusy(false);}}
- async function rotateInvite(){if(!workshop||!facilitator||busy)return;
-  setBusy(true);setError("");try{const code=crypto.randomUUID()+"-"+crypto.randomUUID();
-   const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(code));
-   const hash=Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,"0")).join("");
-   const r=await supabase.from("planning_workshops").update({invite_hash:hash}).eq("id",id).select("id");
-   if(r.error)throw r.error;if(!r.data?.length)throw Error("لم يتم تغيير الرمز؛ تحقق من الصلاحيات.");
-   setRotatedCode(code);setNotice("تم إبطال الرمز السابق وإصدار رمز جديد.");
-  }catch(e){setError(err(e));}finally{setBusy(false);}}
-
+ async function addParticipant(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();
+  if(!workshop||!platformAdmin||busy)return;
+  const phone=participantPhone.replace(/[^0-9]/g,"");
+  if(!/^[1-9][0-9]{7,14}$/.test(phone)){
+   setError("أدخل رقم واتساب بصيغة دولية، مثل 970xxxxxxxxx، بدون صفر محلي في البداية.");
+   return;
+  }
+  setBusy(true);setError("");setWhatsAppUrl("");
+  try{
+   const r=await supabase.rpc("planning_admin_add_participant",{
+    p_workshop:id,p_email:participantEmail.trim().toLowerCase()
+   });
+   if(r.error)throw r.error;
+   const link=window.location.origin+"/workshops/"+id;
+   const message="مرحبًا، تمت إضافتك إلى ورشة "+workshop.title+" على بوصلة AI. سجّل الدخول بحسابك ثم افتح رابط الورشة: "+link;
+   setWhatsAppUrl("https://wa.me/"+phone+"?text="+encodeURIComponent(message));
+   setParticipantEmail("");setParticipantPhone("");
+   await reload();
+   setNotice("تمت إضافة المشارك. افتح واتساب أدناه واضغط إرسال؛ الرسالة لا تُرسل تلقائيًا.");
+  }catch(e){setError(err(e));}finally{setBusy(false);}
+ }
  async function save(field:string,text:string,s:number,sc:"group"|"individual",owner:string){
   if(!workshop||!owner||!userId)return;
   const key=draftKey(s,field,sc,owner);clearTimeout(timers.current[key]);
@@ -187,12 +202,8 @@ export default function WorkshopPage(){
  الإدخال الفردي: {workshop.allow_individual?"مفعل":"غير مفعل"}</button>
  <button className="secondary" disabled={busy} onClick={()=>void updateSettings({vote_open:!workshop.vote_open})}>
  التصويت: {workshop.vote_open?"مفتوح":"مغلق"}</button>
- <button className="secondary" disabled={busy} onClick={()=>void rotateInvite()}>تجديد رمز الدعوة</button>
  <button className="secondary" onClick={()=>void reload()}>تحديث البيانات</button>
  </div>
- {rotatedCode&&<p style={{overflowWrap:"anywhere"}}>رمز الدعوة الجديد: <code dir="ltr">{rotatedCode}</code> —
- <button className="secondary" onClick={()=>void navigator.clipboard.writeText(
-  window.location.origin+"/workshops/"+id+"?code="+encodeURIComponent(rotatedCode))}>نسخ رابط الدعوة</button></p>}
  <h3>المراحل المفتوحة</h3>
  <div className="toolbar">{STAGES.map((s,i)=><button key={i} disabled={busy} className="secondary"
   style={{background:workshop.open_stages.includes(i+1)?"#dcfce7":"#fee2e2"}}
@@ -203,8 +214,19 @@ export default function WorkshopPage(){
  <div className="toolbar"><input className="field" style={{flex:"1 1 170px"}} placeholder="اسم المجموعة"
   value={groupName} onChange={e=>setGroupName(e.target.value)}/>
  <button className="primary" disabled={busy||!groupName.trim()} onClick={()=>void addGroup()}>إضافة مجموعة</button></div>
- <h3>توزيع المشاركين</h3>
- <p className="muted">ينضم المشاركون من حساباتهم الخاصة باستخدام رمز الورشة، ثم يوزعهم الميسر إلى مجموعات ويحدد المقرر.</p>
+ <h3>المشاركون والدعوات عبر واتساب</h3>
+ {platformAdmin&&<>
+  <p className="muted">إضافة المشاركين مقتصرة على حساب مدير بوصلة المعتمد. يجب أن يمتلك المشارك حسابًا مؤكدًا مسبقًا في بوصلة. لن تُرسل أي رسالة بريد إلكتروني.</p>
+  <form className="toolbar" onSubmit={e=>void addParticipant(e)}>
+   <input className="field" type="email" required aria-label="بريد حساب المشارك" placeholder="بريد حساب المشارك المسجل"
+    value={participantEmail} onChange={e=>setParticipantEmail(e.target.value)}/>
+   <input className="field" type="tel" required inputMode="tel" aria-label="رقم واتساب الدولي" placeholder="رقم واتساب مع رمز الدولة"
+    value={participantPhone} onChange={e=>setParticipantPhone(e.target.value)}/>
+   <button type="submit" className="primary" disabled={busy||!participantEmail.trim()||!participantPhone.trim()}>إضافة المشارك</button>
+  </form>
+  {whatsAppUrl&&<p><a className="primary" href={whatsAppUrl} target="_blank" rel="noopener noreferrer">فتح واتساب وإرسال الدعوة</a></p>}
+ </>}
+ {!platformAdmin&&<p className="muted">مدير بوصلة وحده يضيف المشاركين. يمكن للميسر توزيع المشاركين المسجلين على المجموعات.</p>}
  {!participants.length&&<p>لم ينضم المشاركون بعد.</p>}
  <div className="stack">{participants.map(p=><div key={p.id} className="toolbar" style={{borderBottom:"1px solid #e2e8f0",paddingBottom:10}}>
  <strong style={{minWidth:145}}>{p.display_name}</strong>
