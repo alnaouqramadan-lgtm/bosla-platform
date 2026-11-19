@@ -13,7 +13,6 @@ export default function Dashboard(){
  const[orgName,setOrgName]=useState(""); const[title,setTitle]=useState("");
  const[year,setYear]=useState(new Date().getFullYear());
  const[date,setDate]=useState(new Date().toLocaleDateString("en-CA"));
- const[joinCode,setJoinCode]=useState(""); const[recentCode,setRecentCode]=useState(""); const[recentWorkshop,setRecentWorkshop]=useState("");
  const[busy,setBusy]=useState(false);const[loading,setLoading]=useState(true);const[error,setError]=useState("");const[notice,setNotice]=useState("");
  const load=useCallback(async()=>{
   const a=await supabase.auth.getUser();if(!a.data.user){router.replace("/login");return;}
@@ -42,7 +41,7 @@ export default function Dashboard(){
   }catch(e){setError(String((e as Error).message||e));}finally{setBusy(false);}
  }
  async function createWorkshop(e:FormEvent){e.preventDefault();if(busy||!userId||!selectedOrg)return;
-  setBusy(true);setError("");setRecentCode("");
+  setBusy(true);setError("");
   try{const code=crypto.randomUUID()+"-"+crypto.randomUUID();
    const binary=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(code));
    const hash=Array.from(new Uint8Array(binary),n=>n.toString(16).padStart(2,"0")).join("");
@@ -50,18 +49,10 @@ export default function Dashboard(){
     organization_id:selectedOrg,title:title.trim(),planning_year:year,workshop_date:date,created_by:userId,invite_hash:hash
    }).select("id").single();
    if(result.error)throw result.error;
-   setRecentCode(code);setRecentWorkshop(result.data.id);setTitle("");setNotice("تم إنشاء الورشة. احتفظ برمز الدعوة في مكان آمن.");await load();
-  }catch(e){setError(String((e as Error).message||e));}finally{setBusy(false);}
- }
- async function join(e:FormEvent){e.preventDefault();if(busy||!joinCode.trim())return;setBusy(true);setError("");
-  try{const r=await supabase.rpc("planning_join_by_code",{p_code:joinCode.trim()});if(r.error)throw r.error;
-   if(typeof r.data!=="string")throw Error("لم يتم العثور على الورشة");
-   router.push("/workshops/"+r.data);
+   setTitle("");setNotice("تم إنشاء الورشة. افتحها وأضف المشاركين من لوحة الميسر باستخدام حساب المدير.");await load();
   }catch(e){setError(String((e as Error).message||e));}finally{setBusy(false);}
  }
  async function logout(){await supabase.auth.signOut();router.replace("/login");}
- const inviteUrl=recentWorkshop&&recentCode&&typeof window!=="undefined"
-  ? window.location.origin+"/workshops/"+recentWorkshop+"?code="+encodeURIComponent(recentCode):"";
  return <main className="wrap">
  <header className="toolbar" style={{justifyContent:"space-between",marginBottom:16}}>
  <div><h1 className="title">🧭 بوصلة | BOSLA AI</h1><p>مرحبًا، {myName}</p></div>
@@ -75,12 +66,8 @@ export default function Dashboard(){
  <label>اسم المؤسسة<input required minLength={2} maxLength={200} className="field" value={orgName} onChange={e=>setOrgName(e.target.value)}/></label>
  <button className="primary" disabled={busy}>إضافة المؤسسة</button></form>
  </section>
- <section className="card"><h2>الانضمام إلى ورشة</h2>
- <p className="muted">يمكنك الانضمام إلى أي ورشة دُعيت إليها، عبر رمز آمن، دون الحاجة إلى حساب في إنجاز.</p>
- <form className="stack" onSubmit={join}>
- <input className="field" aria-label="رمز الدعوة" value={joinCode} onChange={e=>setJoinCode(e.target.value)} required placeholder="الصق رمز الدعوة"/>
- <button className="primary" disabled={busy}>دخول الورشة</button>
- </form></section>
+ <section className="card"><h2>الدعوات عبر واتساب</h2>
+ <p className="muted">إضافة المشاركين تتم حصريًا بواسطة مدير بوصلة من داخل صفحة الورشة. بعد الإضافة يُجهَّز رابط واتساب للإرسال يدويًا، ولا تُستخدم الدعوات البريدية.</p></section>
  </div>
  <section className="card"><h2>إنشاء ورشة تخطيط</h2>
  <p className="muted">صاحب المؤسسة يستطيع إنشاء الورش وإدارة أدوار الميسر والمشاركين.</p>
@@ -93,12 +80,6 @@ export default function Dashboard(){
  <button className="primary" disabled={!selectedOrg||busy}>{busy?"جارٍ التنفيذ...":"إنشاء الورشة"}</button>
  </form>
  </section>
- {recentCode&&<section className="card" style={{borderColor:"#16a34a"}}>
- <h2>رمز دعوة الورشة الجديدة</h2><p>انسخه الآن؛ المنصة تخزّن بصمته فقط ولا تستطيع استعادته كما هو.</p>
- <code dir="ltr" style={{display:"block",overflowWrap:"anywhere",marginBottom:12}}>{recentCode}</code>
- <div className="toolbar"><button className="primary" onClick={()=>void navigator.clipboard.writeText(inviteUrl)}>نسخ رابط الدعوة</button>
- <Link href={"/workshops/"+recentWorkshop}>إدارة الورشة</Link></div>
- </section>}
  <section className="card"><h2>ورشك المتاحة</h2>
  {!loading&&workshops.length===0&&<p>لم يتم إنشاء ورش أو الانضمام إليها بعد.</p>}
  <div className="two-cols">{workshops.map(w=><Link key={w.id} href={"/workshops/"+w.id} className="chip" style={{display:"block",textDecoration:"none",minHeight:95}}>
