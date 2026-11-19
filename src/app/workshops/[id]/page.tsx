@@ -184,7 +184,7 @@ export default function WorkshopPage(){
  if(loading)return <main className="wrap">جارٍ تحميل الورشة...</main>;
  if(!workshop)return <main className="wrap"><Link href="/dashboard">العودة</Link><section className="card">
  <h1>الورشة غير متاحة لهذا الحساب</h1>
- <p>إذا كان لديك رمز دعوة، أدخله في لوحة حسابك أولاً، أو افتح رابط الدعوة بعد تسجيل الدخول.</p>
+ <p>ليس لديك صلاحية دخول هذه الورشة بعد. اطلب من مدير بوصلة إضافتك بحسابك المسجّل.</p>
  {error&&<p role="alert" className="error">{error}</p>}<Link href="/dashboard">فتح لوحة التحكم</Link>
  </section></main>;
  const grouped=facilitator?groupRepeated(answers,groups,participants):[];
@@ -227,7 +227,7 @@ export default function WorkshopPage(){
   {whatsAppUrl&&<p><a className="primary" href={whatsAppUrl} target="_blank" rel="noopener noreferrer">فتح واتساب وإرسال الدعوة</a></p>}
  </>}
  {!platformAdmin&&<p className="muted">مدير بوصلة وحده يضيف المشاركين. يمكن للميسر توزيع المشاركين المسجلين على المجموعات.</p>}
- {!participants.length&&<p>لم ينضم المشاركون بعد.</p>}
+ {!participants.length&&<p>لم تتم إضافة مشاركين بعد.</p>}
  <div className="stack">{participants.map(p=><div key={p.id} className="toolbar" style={{borderBottom:"1px solid #e2e8f0",paddingBottom:10}}>
  <strong style={{minWidth:145}}>{p.display_name}</strong>
  <select aria-label="مجموعة المشارك" className="field" style={{width:"auto"}} disabled={busy}
