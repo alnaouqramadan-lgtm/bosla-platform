@@ -2,6 +2,17 @@
 import {useState,type FormEvent} from "react";
 import {useRouter} from "next/navigation";
 import {supabase} from "@/lib/supabase";
+function describeAuthError(e:unknown):string {
+ const info=e && typeof e==="object" ? e as {code?:string;status?:number;message?:string} : {};
+ const message=info.message||String(e);
+ if(info.code==="over_email_send_rate_limit" || /email rate limit exceeded/i.test(message)){
+  return "تعذّر إرسال رسالة التحقق: بلغت خدمة البريد حد الإرسال المؤقت في مشروع بوصلة. لا تكرر إنشاء الحساب الآن؛ يلزم إعداد SMTP بواسطة مسؤول المنصة.";
+ }
+ if(info.code==="email_address_not_authorized" || /email address not authorized/i.test(message)){
+  return "لا تسمح خدمة البريد الافتراضية بإرسال رسالة التحقق إلى هذا البريد. يرجى إعداد مزوّد SMTP للمؤسسة.";
+ }
+ return message;
+}
 export default function Login(){
  const router=useRouter();
  const redirect=()=>{
@@ -26,7 +37,7 @@ export default function Login(){
    if(result.error)throw result.error;
    redirect();
   }
- }catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}
+ }catch(e){setError(describeAuthError(e));}finally{setBusy(false);}
  }
  return <main className="wrap" style={{maxWidth:550}}>
  <h1 className="title">🧭 بوصلة | BOSLA AI</h1><section className="card">
