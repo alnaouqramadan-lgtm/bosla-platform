@@ -10,6 +10,7 @@ import type {Workshop,Group,Participant,Answer,Priority,Vote} from "@/lib/types"
 function err(e:unknown):string {return e instanceof Error?e.message:String(e&&typeof e==="object"&&"message" in e?(e as {message:unknown}).message:e);}
 function draftKey(stage:number,field:string,scope:string,owner:string){return [stage,field,scope,owner].join("|");}
 
+type StageDecision={stage:number;content:string;decided_by:string;revision:number};
 function roleLabel(facilitator:boolean,recorder:boolean,inGroup:boolean){
  if(facilitator)return recorder?"ميسّر الورشة ومقرّر المجموعة":"ميسّر الورشة";
  if(recorder)return "مقرّر المجموعة";
@@ -31,6 +32,9 @@ export default function WorkshopPage(){
  const[showResults,setShowResults]=useState(false);const[busy,setBusy]=useState(false);const[loading,setLoading]=useState(true);
  const[error,setError]=useState("");const[notice,setNotice]=useState("");
 
+ const [adminIds,setAdminIds]=useState<string[]>([]);
+ const [decisions,setDecisions]=useState<StageDecision[]>([]);
+ const [decisionDrafts,setDecisionDrafts]=useState<Record<number,{content:string;revision:number}>>({});
  const [loadStep,setLoadStep]=useState("فتح صفحة الورشة");
  const [slowLoad,setSlowLoad]=useState(false);
  const load=useCallback(async()=>{
@@ -67,9 +71,12 @@ export default function WorkshopPage(){
     .eq("workshop_id",id),
    supabase.from("planning_priorities").select("id,organization_id,workshop_id,source_answer_id,label,normalized_label")
     .eq("workshop_id",id),
-   supabase.from("planning_votes").select("id,organization_id,workshop_id,priority_id,user_id").eq("workshop_id",id)
+   supabase.from("planning_votes").select("id,organization_id,workshop_id,priority_id,user_id").eq("workshop_id",id),
+   supabase.rpc("planning_workshop_admin_ids",{p_workshop:id}),
+   supabase.from("planning_stage_decisions").select("stage,content,decided_by,revision").eq("workshop_id",id).order("stage")
   ]);
   for(const q of queries)if(q.error)throw q.error;
+  setAdminIds(queries[5].data??[]);setDecisions(queries[6].data??[]);
   const gs=(queries[0].data??[]) as Group[];
   const as=(queries[2].data??[]) as Answer[];
   setGroups(gs);setParticipants((queries[1].data??[]) as Participant[]);setAnswers(as);
@@ -88,6 +95,9 @@ export default function WorkshopPage(){
   return()=>{mounted=false;window.clearTimeout(timer);};
  },[load]);
 
+ const assignableParticipants=participants.filter(p=>!adminIds.includes(p.user_id));
+ const decision=decisions.find(d=>d.stage===stage);
+ const decisionDraft=decisionDrafts[stage];
  const me=participants.find(p=>p.user_id===userId);
  const facilitator=!!workshop&&(workshop.created_by===userId||me?.workshop_role==="facilitator");
  const groupId=facilitator?selectedGroup:me?.group_id||"";
@@ -99,6 +109,26 @@ export default function WorkshopPage(){
   participants.find(p=>p.user_id===a.owner_id)?.display_name||"فردي";
 
  async function reload(){setError("");try{await load();}catch(e){setError(err(e));}}
+ async function saveDecision(){
+  if(!facilitator||busy||!decisionDraft?.content.trim()||workshop?.status!=="active")return;
+  setBusy(true);setError("");setNotice("");
+  const content=decisionDraft.content.trim();
+  try{
+   const table=supabase.from("planning_stage_decisions");
+   const query=decisionDraft.revision===0?table.insert({workshop_id:id,stage,content}):
+    table.update({content}).eq("workshop_id",id).eq("stage",stage).eq("revision",decisionDraft.revision);
+   const result=await query.select("stage,content,decided_by,revision").maybeSingle();
+   if(result.error&&result.error.code!=="23505")throw result.error;
+   if(!result.data){
+    await load();
+    throw new Error("تغيّر القرار. راجع القرار المحفوظ ثم اختر «استخدام النسخة المحفوظة» قبل التعديل.");
+   }
+   const saved=result.data as StageDecision;
+   setDecisions(prev=>[...prev.filter(d=>d.stage!==saved.stage),saved].sort((a,b)=>a.stage-b.stage));
+   setDecisionDrafts(prev=>{const next={...prev};delete next[stage];return next;});
+   setNotice("تم اعتماد قرار النموذج.");
+  }catch(e){setError(err(e));}finally{setBusy(false);}
+ }
  async function updateSettings(patch:Partial<Workshop>){if(!workshop||!facilitator||busy)return;
   setBusy(true);setError("");try{
    const r=await supabase.from("planning_workshops").update(patch)
@@ -191,7 +221,7 @@ export default function WorkshopPage(){
    if(result.error)throw result.error;await refreshVotes();
   }catch(e){setError(err(e));}finally{setBusy(false);}}
  async function excel(){if(!workshop||!facilitator||busy)return;setBusy(true);setError("");
-  try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes);
+  try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes,decisions);
    setNotice("تم تحضير ملف Excel بأوراق منفصلة لكل مخرجات الورشة.");
   }catch(e){setError(err(e));}finally{setBusy(false);}}
 
@@ -213,13 +243,13 @@ export default function WorkshopPage(){
  const grouped=facilitator?groupRepeated(answers,groups,participants):[];
  return <main className="wrap">
  <header className="toolbar no-print" style={{justifyContent:"space-between"}}>
- <Link href="/dashboard">العودة للورش</Link><span>{roleLabel(facilitator,!!me?.is_recorder,!!me?.group_id)}</span>
+ <Link href="/dashboard">العودة للورش</Link><span>{platformAdmin?"مدير المنصة":roleLabel(facilitator,!!me?.is_recorder,!!me?.group_id)}</span>
  </header>
  <h1 className="title">{workshop.title}</h1>
  <p className="muted">السنة: {workshop.planning_year} — التاريخ: {workshop.workshop_date}</p>
  {error&&<p className="error" role="alert">{error}</p>}{notice&&<p className="good" role="status">{notice}</p>}
  {facilitator&&<section className="card no-print">
- <h2>لوحة الميسر</h2>
+ <h2>{platformAdmin?"إدارة الورشة":"لوحة الميسر"}</h2>
  <div className="toolbar">
  <button className="secondary" disabled={busy} onClick={()=>void updateSettings({allow_individual:!workshop.allow_individual})}>
  الإدخال الفردي: {workshop.allow_individual?"مفعل":"غير مفعل"}</button>
@@ -250,8 +280,8 @@ export default function WorkshopPage(){
   {whatsAppUrl&&<p><a className="primary" href={whatsAppUrl} target="_blank" rel="noopener noreferrer">فتح واتساب وإرسال الدعوة</a></p>}
  </>}
  {!platformAdmin&&<p className="muted">مدير بوصلة وحده يضيف المشاركين. يمكن للميسر توزيع المشاركين المسجلين على المجموعات.</p>}
- {!participants.length&&<p>لم تتم إضافة مشاركين بعد.</p>}
- <div className="stack">{participants.map(p=><div key={p.id} className="toolbar" style={{borderBottom:"1px solid #e2e8f0",paddingBottom:10}}>
+ {!assignableParticipants.length&&<p>لم تتم إضافة مشاركين بعد.</p>}
+ <div className="stack">{assignableParticipants.map(p=><div key={p.id} className="toolbar" style={{borderBottom:"1px solid #e2e8f0",paddingBottom:10}}>
  <div style={{minWidth:145}}><strong>{p.display_name}</strong><div className="muted">{roleLabel(p.user_id===workshop.created_by||p.workshop_role==="facilitator",p.is_recorder,!!p.group_id)}</div></div>
  <select aria-label="مجموعة المشارك" className="field" style={{width:"auto"}} disabled={busy}
   value={p.group_id||""} onChange={e=>void setParticipant(p,{group_id:e.target.value||null,is_recorder:false})}>
@@ -297,6 +327,15 @@ export default function WorkshopPage(){
   </label>;
  })}</div>
  </section>}
+ {facilitator&&!showResults&&<section className="card no-print">
+ <h2>مقارنة المجموعات واعتماد قرار النموذج</h2>
+ {STAGES[stage-1].fields.map(field=><details key={field.key}><summary>{field.title}</summary>
+ {groups.map(group=><div key={group.id}><strong>{group.name}</strong><p style={{whiteSpace:"pre-wrap"}}>{answers.find(a=>a.stage===stage&&a.field_key===field.key&&a.scope==="group"&&a.owner_id===group.id)?.content||"لم تُسجّل إجابة"}</p></div>)}</details>)}
+ <label>قرار النموذج<textarea className="field" rows={4} maxLength={30000} disabled={busy||workshop.status!=="active"}
+ value={decisionDraft?.content??decision?.content??""} onChange={e=>setDecisionDrafts({...decisionDrafts,[stage]:{content:e.target.value,revision:decisionDraft?.revision??decision?.revision??0}})}/></label>
+ <button className="primary" disabled={busy||workshop.status!=="active"||!decisionDraft?.content.trim()} onClick={()=>void saveDecision()}>اعتماد قرار النموذج</button>
+ {decisionDraft&&decision&&decisionDraft.revision!==decision.revision&&<div><p>{decision.content}</p><button onClick={()=>setDecisionDrafts(prev=>{const next={...prev};delete next[stage];return next;})}>استخدام النسخة المحفوظة</button></div>}
+ </section>}
  {stage===2&&!showResults&&<section className="card no-print">
  <h2>التصويت على القضايا ذات الأولوية</h2>
  {facilitator&&<button className="primary" disabled={busy} onClick={()=>void collectPriorities()}>جمع القضايا المتكررة</button>}
@@ -315,6 +354,9 @@ export default function WorkshopPage(){
  <h2>المخرجات النهائية للورشة</h2>
  <div className="toolbar no-print"><button className="primary" disabled={busy} onClick={()=>void excel()}>تصدير Excel</button>
  <button className="secondary" onClick={()=>window.print()}>طباعة التقرير</button></div>
+ <h3>القرارات المعتمدة</h3>
+ {decisions.length===0&&<p>لم تُعتمد قرارات بعد.</p>}
+ {decisions.map(d=><article key={d.stage}><strong>{STAGES[d.stage-1].name}</strong><p style={{whiteSpace:"pre-wrap"}}>{d.content}</p><small>اعتمد بواسطة {participants.find(p=>p.user_id===d.decided_by)?.display_name||"ميسّر الورشة"}</small></article>)}
  <h3>المقترحات المتكررة</h3>
  <p className="muted">احتفظنا بكل نص أصلي؛ المقترحات المجمعة أدناه للمراجعة فقط.</p>
  {!grouped.length&&<p>لا توجد إجابات مدخلة حتى الآن.</p>}
