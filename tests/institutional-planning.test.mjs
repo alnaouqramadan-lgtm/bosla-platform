@@ -73,3 +73,13 @@ test("editing and cancellation are supported for all planning record types",()=>
  assert.match(detail,/\.update\(data\)/);
  assert.match(detail,/\.eq\("plan_id",id\)/);
 });
+
+test("only finalized source workshop analysis can be imported as draft SWOT",()=>{
+ assert.match(detail,/importApprovedSwot/);
+ assert.match(detail,/eq\("stage",2\)/);
+ assert.match(detail,/ورقة تحليل SWOT \(2\) لم تُعتمد نهائيًا/);
+ assert.match(detail,/item\.status!=="approved"/);
+ assert.match(detail,/environmental_analysis:analysis/);
+ assert.match(detail,/importApprovedGoals/);
+ assert.match(detail,/splitApprovedGoals/);
+});
