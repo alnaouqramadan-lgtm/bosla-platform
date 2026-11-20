@@ -54,8 +54,8 @@ export default function PlanGovernance({plan,activities,indicators,onReload}:Pro
  useEffect(()=>{void refresh();},[refresh]);
  useEffect(()=>{setActivityId(old=>activities.some(a=>a.id===old)?old:activities[0]?.id??"");},[activities]);
  useEffect(()=>{setIndicatorId(old=>indicators.some(k=>k.id===old)?old:indicators[0]?.id??"");},[indicators]);
- const latestReports=useMemo(()=>latestById(activityReports,a=>a.activity_id),[activityReports]);
- const latestKpis=useMemo(()=>latestById(kpiMeasurements,k=>k.indicator_id),[kpiMeasurements]);
+ const latestReports=useMemo(()=>latestById(activityReports,a=>a.activity_id,a=>a.report_date),[activityReports]);
+ const latestKpis=useMemo(()=>latestById(kpiMeasurements,k=>k.indicator_id,k=>k.measured_on),[kpiMeasurements]);
  const counts=useMemo(()=>deliveryOverview(activities,activityReports,today()),[activities,activityReports]);
 
  async function publish(){
