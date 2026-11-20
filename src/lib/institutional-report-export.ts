@@ -56,6 +56,8 @@ export async function downloadPeriodReportXlsx(plan:{title:string;id:string;peri
   ["مؤشرات مقاسة لكن اتجاه النجاح غير محدد",s.unassessable],
   ["قراءات المؤشرات المؤرخة داخل الفترة",s.periodKpiReadings]
  ]);
+ add("نتائج الأهداف",cols(["رمز الهدف","الهدف الاستراتيجي","عدد المؤشرات","حققت المستهدف","لم تحقق المستهدف","بلا قياس","اتجاه النجاح غير محدد رغم وجود قياس"],
+  [18,42,18,22,23,16,37]),report.goalResults.map(g=>[g.code,g.title,g.indicators,g.counts.met,g.counts.not_met,g.counts.unmeasured,g.counts.unknown_direction]));
  const status:Record<string,string>={
   future_period:"الفترة لم تبدأ",scheduled:"مجدول لاحقًا",completed:"مكتمل",blocked:"متعثر",
   overdue:"متأخر",in_progress:"قيد التنفيذ",unreported:"بدون تقرير"

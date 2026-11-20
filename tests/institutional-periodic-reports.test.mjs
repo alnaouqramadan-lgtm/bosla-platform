@@ -27,7 +27,7 @@ test("reporting boundaries support months, quarters, year and leap February",()=
 test("period report uses last dated cumulative evidence, not sum, and never fabricates zeros",()=>{
  assert.equal(run([
   'const plan={period_start:"2026-01-01",period_end:"2028-12-31"};',
-  'const goals=[{id:"G",title:"تحسين الوصول"}];',
+  'const goals=[{id:"G",title:"تحسين الوصول"},{id:"H",title:"تحسين الوصول"}];',
   'const a={goal_id:"G",owner_name:"المسؤول",target_quantity:100,target_unit:"طفل",status:"planned"};',
   'const activities=[',
   ' {id:"A",title:"نشاط قائم",planned_start:"2026-10-01",planned_end:"2026-11-05",estimated_budget:100,currency_code:"ILS",...a},',
@@ -52,6 +52,9 @@ test("period report uses last dated cumulative evidence, not sum, and never fabr
   'const measurements=[m("K","2026-10-31",50),m("K","2026-11-15",120),m("K","2026-11-25",130),m("D","2026-11-13",12),m("U","2026-11-12",5)];',
   'const x=buildPeriodicReport({plan,goals,activities,indicators,reports,measurements,period:"month",year:2026,slot:11,today:"2026-11-20"});',
   'assert.equal(x.asOf,"2026-11-20");',
+  'assert.deepEqual(x.goalResults[0].counts,{met:1,not_met:1,unmeasured:1,unknown_direction:1});',
+  'assert.equal(x.goalResults[0].indicators,4);',
+  'assert.equal(x.goalResults[1].indicators,0);',
   'assert.equal(x.activityLines[0].progress,60);',
   'assert.equal(x.activityLines[0].spent,35);',
   'assert.equal(x.activityLines[0].flag,"overdue");',

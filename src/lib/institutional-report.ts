@@ -16,7 +16,7 @@ export type ActivityLine={
  reportDate:string|null;reference:string;summary:string;flag:DeliveryFlag;
 };
 export type IndicatorLine={
- id:string;goalTitle:string;title:string;unit:string;baseline:number|null;target:number|null;
+ goalId:string;id:string;goalTitle:string;title:string;unit:string;baseline:number|null;target:number|null;
  actual:number|null;gap:number|null;direction:"up"|"down"|null;attainment:Attainment;
  measuredOn:string|null;reference:string;
 };
@@ -25,7 +25,11 @@ export type CurrencyLine={
  plannedCount:number;spentCount:number;missingPlanned:number;missingSpent:number;
  variance:number|null;
 };
+export type GoalResults={
+ id:string;title:string;code:string;indicators:number;counts:Record<Attainment,number>;
+};
 export type PeriodicReport={
+ goalResults:GoalResults[];
  window:ReportWindow;asOf:string;hasStarted:boolean;
  activityLines:ActivityLine[];indicatorLines:IndicatorLine[];currencies:CurrencyLine[];
  totals:{activities:number;completed:number;overdue:number;blocked:number;
@@ -113,11 +117,23 @@ export function buildPeriodicReport(input:{
    if(direction===null)attainment="unknown_direction";
    else attainment=direction==="up"?(actual>=target!?"met":"not_met"):(actual<=target!?"met":"not_met");
   }
-  return {id:k.id,goalTitle:goals.get(k.goal_id)??"هدف غير متاح",title:k.title,
+  return {goalId:k.goal_id,id:k.id,goalTitle:goals.get(k.goal_id)??"هدف غير متاح",title:k.title,
    unit:k.unit,baseline,target,actual,gap:target!=null&&actual!=null?actual-target:null,
    direction,attainment,measuredOn:current?.measured_on??null,
    reference:current?.evidence_reference??""};
  });
+ const goalResults:GoalResults[]=input.goals.map(goal=>({
+  id:goal.id,title:goal.title,code:goal.code,indicators:0,
+  counts:{met:0,not_met:0,unmeasured:0,unknown_direction:0}
+ }));
+ const goalById=new Map(goalResults.map(goal=>[goal.id,goal]));
+ for(const line of indicatorLines){
+  const goal=goalById.get(line.goalId);
+  if(goal){
+   goal.indicators++;
+   goal.counts[line.attainment]++;
+  }
+ }
  const budget=new Map<string,{planned:number;spent:number;pc:number;sc:number;mp:number;ms:number}>();
  for(const a of activityLines){
   const b=budget.get(a.currency)??{planned:0,spent:0,pc:0,sc:0,mp:0,ms:0};
@@ -132,7 +148,7 @@ export function buildPeriodicReport(input:{
  })).sort((a,b)=>a.currency.localeCompare(b.currency));
  const counted=hasStarted?input.reports.filter(r=>r.report_date>=start&&r.report_date<=asOf):[];
  const measured=hasStarted?input.measurements.filter(r=>r.measured_on>=start&&r.measured_on<=asOf):[];
- return {window,asOf,hasStarted,activityLines,indicatorLines,currencies,
+ return {window,asOf,hasStarted,goalResults,activityLines,indicatorLines,currencies,
   totals:{
    activities:activityLines.length,
    completed:activityLines.filter(a=>a.flag==="completed").length,

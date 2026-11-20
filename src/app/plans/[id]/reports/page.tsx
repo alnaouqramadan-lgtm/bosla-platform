@@ -199,6 +199,14 @@ export default function InstitutionalPeriodicReportPage(){
     <div><strong>{report.totals.periodKpiReadings}</strong><span>قراءات KPI داخل الفترة</span></div>
    </div>
    <p className="bosla-report-note">مؤشرات التقدم تعبّر عن حالة الأنشطة المسجلة، ولا تعني تلقائيًا تحقيق الأهداف الاستراتيجية أو الأثر. فئتا المتأخر والمتعثر، وكذلك فئة الأنشطة بلا تقرير، قد تتداخل ولا يُجمع عددها للوصول إلى إجمالي الأنشطة.</p>
+   <h3>نتائج المؤشرات حسب الهدف الاستراتيجي</h3>
+   {report.goalResults.length===0?<p>لا توجد أهداف مسجلة في الخطة.</p>:<div className="bosla-report-table-wrap"><table>
+    <thead><tr><th>الهدف</th><th>عدد المؤشرات</th><th>حققت المستهدف</th><th>لم تحقق المستهدف</th><th>بلا قياس</th><th>اتجاه النجاح غير محدد رغم وجود قياس</th></tr></thead>
+    <tbody>{report.goalResults.map(goal=><tr key={goal.id}>
+     <td>{goal.code} {goal.title}</td><td>{goal.indicators}</td><td>{goal.counts.met}</td><td>{goal.counts.not_met}</td>
+     <td>{goal.counts.unmeasured}</td><td>{goal.counts.unknown_direction}</td>
+    </tr>)}</tbody>
+   </table></div>}
    <h3>2. متابعة أنشطة الخطة التشغيلية</h3>
    <div className="bosla-report-table-wrap"><table>
     <thead><tr><th>الهدف المرتبط</th><th>النشاط</th><th>المسؤول</th><th>موعد النهاية</th>
