@@ -1,4 +1,3 @@
-import ExcelJS from "exceljs";
 import type {Answer, Group,Participant,Priority,Vote,Workshop} from "@/lib/types";
 import {STAGES,fieldName,normalizeLine} from "@/lib/stages";
 
@@ -25,6 +24,7 @@ function safe(value:string|number|undefined|null):string|number{
 export async function exportWorkbook(
  workshop:Workshop,answers:Answer[],groups:Group[],participants:Participant[],priorities:Priority[],votes:Vote[]
 ){
+ const {default: ExcelJS}=await import("exceljs");
  const book=new ExcelJS.Workbook();book.creator="BOSLA AI";
  const sources=(a:Answer)=>a.scope==="group"?groups.find(g=>g.id===a.owner_id)?.name||"—":
   participants.find(p=>p.user_id===a.owner_id)?.display_name||"—";
