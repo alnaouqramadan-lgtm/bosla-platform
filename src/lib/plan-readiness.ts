@@ -6,6 +6,7 @@ export type ReadinessCheck={
  title:string;detail:string;
 };
 export type ReadinessAssessment={
+ goalCoverage:{goal:StrategicGoal;activityCount:number;indicatorCount:number}[];
  checks:ReadinessCheck[];
  mandatoryPassed:number;mandatoryTotal:number;
  recommendationsPassed:number;recommendationsTotal:number;
@@ -73,10 +74,20 @@ export function assessPlanReadiness(input:{
  add("kpi_direction","indicators",false,all(indicators,k=>
   isNumber(k.baseline)&&isNumber(k.target)&&k.baseline!==k.target),
   "اتجاه نجاح قابل للاستنتاج","للمقارنة الآلية، يحتاج المؤشر إلى خط أساس يختلف عن المستهدف، أو إلى تحديد اتجاه صريح مستقبلًا.");
+ const coverageByGoal = new Map(goals.map(goal => [goal.id, {goal, activityCount:0, indicatorCount:0}]));
+ for (const activity of activities) {
+  const coverage = coverageByGoal.get(activity.goal_id);
+  if (coverage) coverage.activityCount++;
+ }
+ for (const indicator of indicators) {
+  const coverage = coverageByGoal.get(indicator.goal_id);
+  if (coverage) coverage.indicatorCount++;
+ }
+ const goalCoverage = Array.from(coverageByGoal.values());
  const must=checks.filter(c=>c.required);
  const advisory=checks.filter(c=>!c.required);
  const mandatoryPassed=must.filter(c=>c.passed).length;
- return {checks,mandatoryPassed,mandatoryTotal:must.length,
+ return {goalCoverage,checks,mandatoryPassed,mandatoryTotal:must.length,
   recommendationsPassed:advisory.filter(c=>c.passed).length,recommendationsTotal:advisory.length,
   canPublish:mandatoryPassed===must.length,mandatoryMissing:must.length-mandatoryPassed};
 }

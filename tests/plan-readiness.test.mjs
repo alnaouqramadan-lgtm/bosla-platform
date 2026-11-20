@@ -70,3 +70,16 @@ test("readiness is advisory UI with navigation; KPI entry requires correct role"
  assert.match(governance,/getFullYear\(\)/);
  assert.match(detail,/onNavigate=\{setActive\}/);
 });
+test("goal coverage preserves goal order and reveals gaps hidden by plan totals",()=>{
+ assert.equal(run(`
+ const goals=[{id:"b"},{id:"a"},{id:"c"}];
+ const activities=[{goal_id:"a"},{goal_id:"a"},{goal_id:"unknown"}];
+ const indicators=[{goal_id:"a"},{goal_id:"b"}];
+ const plan={vision:"vision",mission:"mission"};
+ const result=assessPlanReadiness({goals,activities,indicators,plan});
+ assert.deepEqual(result.goalCoverage.map(r=>[r.goal.id,r.activityCount,r.indicatorCount]),
+   [["b",0,1],["a",2,1],["c",0,0]]);
+ assert.deepEqual(assessPlanReadiness({goals:[],activities,indicators,plan}).goalCoverage,[]);
+ console.log("ok");
+ `),"ok");
+});

@@ -10,6 +10,7 @@ export default function PlanReadinessPanel({plan,goals,activities,indicators,onN
  const audit=useMemo(()=>assessPlanReadiness({plan,goals,activities,indicators}),
   [plan,goals,activities,indicators]);
  const ratio=Math.round(100*audit.mandatoryPassed/audit.mandatoryTotal);
+ const coveredGoals=audit.goalCoverage.filter(row=>row.activityCount>0 && row.indicatorCount>0).length;
  const mandatory=audit.checks.filter(c=>c.required);
  const recommendations=audit.checks.filter(c=>!c.required);
  const item=(check:ReadinessCheck)=><li className="bosla-readiness-check" key={check.id}>
@@ -31,6 +32,18 @@ export default function PlanReadinessPanel({plan,goals,activities,indicators,onN
   </div>
   {audit.canPublish?<p className="good">اكتملت حقول النشر الأساسية. قد تظل هناك توصيات لتحسين التنفيذ والقياس، والاعتماد الإداري خطوة مستقلة.</p>:
    <p className="error">يوجد {audit.mandatoryMissing} من متطلبات النشر الأساسية غير المكتملة. أكملها قبل محاولة الاعتماد النهائي.</p>}
+  {audit.goalCoverage.length>0 && <details open={coveredGoals<audit.goalCoverage.length}>
+   <summary>ربط الأهداف بالتنفيذ والقياس ({coveredGoals}/{audit.goalCoverage.length})</summary>
+   <p>عدد الأهداف التي يرتبط بكل منها نشاط تشغيلي واحد على الأقل ومؤشر أداء واحد على الأقل.</p>
+   <ul className="bosla-readiness-list">
+    {audit.goalCoverage.map(({goal,activityCount,indicatorCount})=><li key={goal.id}>
+     <strong>{goal.code} {goal.title}</strong>
+     <p>الأنشطة المرتبطة: {activityCount} · مؤشرات الأداء المرتبطة: {indicatorCount}</p>
+     {activityCount===0 && <button className="secondary" type="button" onClick={()=>onNavigate("activities")}>مراجعة الأنشطة</button>}
+     {indicatorCount===0 && <button className="secondary" type="button" onClick={()=>onNavigate("indicators")}>مراجعة المؤشرات</button>}
+    </li>)}
+   </ul>
+  </details>}
   <details open={audit.mandatoryMissing>0}>
    <summary>المتطلبات الأساسية ({audit.mandatoryPassed}/{audit.mandatoryTotal})</summary>
    <ul className="bosla-readiness-list">{mandatory.map(item)}</ul>
