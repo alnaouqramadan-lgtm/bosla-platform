@@ -110,7 +110,7 @@ export default function PlansHome(){
     <span className="institutional-pill">{p.status==="approved"?"خطة معتمدة":p.status==="in_review"?"بانتظار المراجع":p.status==="reviewed"?"بانتظار اعتماد المالك":"مسودة قيد الإعداد"}</span>
     <strong>{p.title}</strong>
     <small>{visibleOrgs.find(o=>o.id===p.organization_id)?.name??"المؤسسة"} • {p.period_start} — {p.period_end}</small>
-    <span>{p.status==="approved"?"عرض الخطة ومتابعة تنفيذها":p.status==="draft"?"فتح المسودة":"عرض مسار الاعتماد"} ←</span>
+    <span>{p.status==="approved"?"فتح الخطة والتقارير الدورية":p.status==="draft"?"فتح المسودة":"عرض مسار الاعتماد"} ←</span>
    </Link>)}</div>
   </section>
   <p className="muted">يستطيع مالك المؤسسة تعيين محرر ومراجع مستقل ومشاهد لكل خطة. يتطلب الاعتماد النهائي موافقة المراجع إذا تم تكليفه، بينما تبقى الخطط المعتمدة ثابتة وتُسجّل نتائجها الفعلية بأدلتها.</p>
