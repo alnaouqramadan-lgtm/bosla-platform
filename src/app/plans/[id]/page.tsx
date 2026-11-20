@@ -166,6 +166,30 @@ export default function InstitutionalPlan(){
    return "حُذف السجل من مسودة الخطة.";
   });
  }
+ async function importApprovedSwot(){
+  if(draft.environmental_analysis.trim()&&!window.confirm("سيُستبدل التحليل البيئي الحالي بصياغات SWOT المعتمدة من ورشة المصدر. هل تريد المتابعة؟"))return;
+  await action(async()=>{
+   if(!plan?.source_workshop_id)throw new Error("لم تُربط هذه الخطة بورشة مصدر.");
+   const response=await supabase.from("planning_form_reviews")
+    .select("stage,fields,finalized_at").eq("workshop_id",plan.source_workshop_id).eq("stage",2).maybeSingle();
+   if(response.error)throw response.error;
+   if(!response.data?.finalized_at)throw new Error("ورقة تحليل SWOT (2) لم تُعتمد نهائيًا.");
+   const fields=response.data.fields as Record<string,{content?:string;status?:string}>;
+   const groups=[["نقاط القوة","strengths"],["نقاط الضعف","weaknesses"],
+    ["الفرص","opportunities"],["التهديدات","threats"],["القضايا ذات الأولوية","priorities"]];
+   const chunks=groups.map(([label,key])=>{
+    const item=fields[key];
+    if(!item||item.status!=="approved")throw new Error("توجد خانات غير معتمدة في تحليل SWOT.");
+    return label+"\\n"+(item.content?.trim()||"");
+   });
+   const analysis=chunks.join("\\n\\n").replaceAll("\\n","\n");
+   const save=await supabase.from("planning_strategic_plans")
+    .update({environmental_analysis:analysis}).eq("id",id).eq("organization_id",plan.organization_id)
+    .select("id").single();
+   if(save.error)throw save.error;
+   return "تم نقل تحليل SWOT المعتمد إلى مسودة الخطة مع الاحتفاظ بأصل الورشة.";
+  });
+ }
  async function importApprovedGoals(){
   await action(async()=>{
    if(!plan?.source_workshop_id)throw new Error("لم تُربط الخطة بورشة مصدر.");
@@ -219,6 +243,9 @@ export default function InstitutionalPlan(){
   </nav>
   {active==="vision"&&<section className="card institutional-card">
    <h2>الهوية والتوجه الاستراتيجي</h2>
+   {plan.source_workshop_id&&<div className="institutional-actions">
+    <button type="button" className="secondary" disabled={busy} onClick={()=>void importApprovedSwot()}>استيراد تحليل SWOT المعتمد من ورشة المصدر</button>
+   </div>}
    <p className="muted">اكتب الصياغة المؤسسية المعتمدة للنقاش. هذه مسودة قابلة للتعديل وليست اعتمادًا رسميًا.</p>
    <form className="stack" onSubmit={saveDirection}>
     <label>الرؤية<textarea rows={3} maxLength={6000} className="field" value={draft.vision} onChange={e=>setDraft(p=>({...p,vision:e.target.value}))}/></label>
