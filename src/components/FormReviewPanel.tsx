@@ -12,13 +12,31 @@ type Props={
 };
 export default function FormReviewPanel({workshopId,stage,active,groups,answers,review,onSaved}:Props){
  const [drafts,setDrafts]=useState<Record<string,Draft>>({});
+ const [suggestion,setSuggestion]=useState<{key:string;text:string;revision:number}|null>(null);
+ const [suggesting,setSuggesting]=useState("");
  const [busy,setBusy]=useState(false);
  const [message,setMessage]=useState("");
  const [conflict,setConflict]=useState(false);
  const fields=STAGES[stage-1].fields;
  const approved=fields.filter(f=>review?.fields[f.key]?.status==="approved").length;
  const locked=!active||!!review?.finalized_at||busy||conflict;
- function change(key:string,draft:Draft){setDrafts(prev=>({...prev,[key]:draft}));setMessage("");}
+ function change(key:string,draft:Draft){setSuggestion(null);setDrafts(prev=>({...prev,[key]:draft}));setMessage("");}
+ async function suggest(key:string){
+  if(locked||!review||drafts[key]||review.fields[key]?.status!=="draft")return;
+  setBusy(true);setSuggesting(key);setSuggestion(null);setMessage("");
+  try{
+   const {data}=await supabase.auth.getSession();
+   if(!data.session)throw new Error("سجّل الدخول إلى بوصلة مجددًا.");
+   const response=await fetch("/api/form-suggestion",{method:"POST",
+    headers:{"Content-Type":"application/json",Authorization:"Bearer "+data.session.access_token},
+    body:JSON.stringify({workshopId,stage,key,revision:review.revision})
+   });
+   const payload=await response.json();
+   if(!response.ok)throw new Error(payload.error||"تعذّر توليد الاقتراح.");
+   setSuggestion({key,text:payload.suggestion,revision:payload.revision});
+  }catch(e){setMessage(e instanceof Error?e.message:"تعذّر توليد الاقتراح.");}
+  finally{setSuggesting("");setBusy(false);}
+ }
  async function save(action:"draft"|"approve"|"finalize",key?:string){
   if(locked)return;
   const draft=key?(drafts[key]??review?.fields[key]):undefined;
@@ -53,7 +71,9 @@ export default function FormReviewPanel({workshopId,stage,active,groups,answers,
    onChange={e=>change(f.key,{...draft,content:e.target.value})}/></label>
   {draft.group_name&&<details><summary>النص المتبنّى من {draft.group_name}</summary><p style={{whiteSpace:"pre-wrap"}}>{draft.source_text}</p></details>}
   {!review?.finalized_at&&<div className="toolbar"><button className="secondary" disabled={locked||!drafts[f.key]?.content.trim()} onClick={()=>void save("draft",f.key)}>حفظ المسودة</button>
+   {saved?.status==="draft"&&!drafts[f.key]&&<button className="secondary" disabled={locked} onClick={()=>void suggest(f.key)}>{suggesting===f.key?"جارٍ تحسين الصياغة…":"تعديل مقترح من الذكاء الاصطناعي"}</button>}
    <button className="primary" disabled={locked||!draft.content.trim()||(!drafts[f.key]&&saved?.status==="approved")} onClick={()=>void save("approve",f.key)}>اعتماد إجابة الخانة</button></div>}
+  {suggestion?.key===f.key&&suggestion.revision===review?.revision&&saved?.status==="draft"&&!drafts[f.key]&&<section className="card" aria-label="الصياغة المقترحة"><h3>الصياغة المقترحة</h3><p style={{whiteSpace:"pre-wrap"}}>{suggestion.text}</p><div className="toolbar"><button className="secondary" disabled={locked} onClick={()=>change(f.key,{...draft,content:suggestion.text})}>استخدام الاقتراح في المسودة</button><button className="secondary" onClick={()=>setSuggestion(null)}>تجاهل الاقتراح</button></div></section>}
   </details>;
  })}
  {approved>0&&<details><summary>مراجعة الصياغات المعتمدة</summary>{fields.map(f=>review?.fields[f.key]?.status==="approved"&&<article key={f.key}><strong>{f.title}</strong><p style={{whiteSpace:"pre-wrap"}}>{review.fields[f.key].content}</p></article>)}</details>}
