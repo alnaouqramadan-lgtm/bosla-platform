@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState,type FormEvent} from "react";
 import {useParams,useRouter} from "next/navigation";
 import Link from "next/link";
 import {supabase} from "@/lib/supabase";
+import StrategyDesign from "@/components/StrategyDesign";
 import PlanGovernance from "@/components/PlanGovernance";
 import type {PlanAccessRole} from "@/components/PlanTeamReview";
 import {
@@ -17,7 +18,7 @@ const emptyActivity={goal_id:"",title:"",program_name:"",project_name:"",target_
  estimated_budget:"",currency_code:"ILS" as OperationalActivity["currency_code"],risk_notes:""};
 const emptyKpi={goal_id:"",title:"",unit:"",baseline:"",target:"",
  verification_source:"",frequency:"quarterly" as PerformanceIndicator["frequency"],methodology:""};
-type Section="vision"|"goals"|"activities"|"indicators"|"governance";
+type Section="strategy"|"vision"|"goals"|"activities"|"indicators"|"governance";
 export default function InstitutionalPlan(){
  const {id}=useParams<{id:string}>();const router=useRouter();
  const [plan,setPlan]=useState<StrategicPlan|null>(null);
@@ -34,6 +35,7 @@ export default function InstitutionalPlan(){
  const [editingKpiId,setEditingKpiId]=useState("");
  const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");const [notice,setNotice]=useState("");
+ const [design,setDesign]=useState<unknown>({});
  const [active,setActive]=useState<Section>("vision");
  const canEdit=plan?.status==="draft"&&(accessRole==="owner"||accessRole==="editor");
  const load=useCallback(async()=>{
@@ -41,7 +43,7 @@ export default function InstitutionalPlan(){
   if(auth.error)throw auth.error;
   if(!auth.data.user){router.replace("/login");return;}
   const root=await supabase.from("planning_strategic_plans")
-   .select("id,organization_id,source_workshop_id,created_by,title,period_start,period_end,vision,mission,institutional_values,environmental_analysis,status,revision,created_at,updated_at")
+   .select("id,organization_id,source_workshop_id,created_by,title,period_start,period_end,vision,mission,institutional_values,environmental_analysis,status,revision,created_at,updated_at,strategy_design")
    .eq("id",id).maybeSingle();
   if(root.error)throw root.error;
   if(!root.data){setPlan(null);return;}
@@ -65,7 +67,7 @@ export default function InstitutionalPlan(){
     .eq("plan_id",id).order("created_at")
   ]);
   for(const result of [goalsRes,activityRes,indicatorRes])if(result.error)throw result.error;
-  setPlan(current);
+  setPlan(current);setDesign(root.data.strategy_design);
   setDraft({vision:current.vision,mission:current.mission,institutional_values:current.institutional_values,
    environmental_analysis:current.environmental_analysis});
   const list=(goalsRes.data??[]) as StrategicGoal[];
@@ -254,9 +256,10 @@ export default function InstitutionalPlan(){
   {error&&<p role="alert" className="card error">{error}</p>}
   {notice&&<p role="status" className="card good">{notice}</p>}
   <nav className="institutional-tabs" aria-label="أقسام الخطة">
-   {([["vision","التوجه الاستراتيجي"],["goals","الأهداف"],["activities","الخطة التشغيلية"],["indicators","مؤشرات الأداء"],["governance","الاعتماد والمتابعة"]] as const)
+   {([["strategy","بناء الاستراتيجية"],["vision","التوجه الاستراتيجي"],["goals","الأهداف"],["activities","الخطة التشغيلية"],["indicators","مؤشرات الأداء"],["governance","الاعتماد والمتابعة"]] as const)
     .map(([key,label])=><button key={key} className={active===key?"primary":"secondary"} onClick={()=>setActive(key)}>{label}</button>)}
   </nav>
+  {active==="strategy"&&<StrategyDesign key={plan.id} planId={plan.id} initial={design} stamp={plan.updated_at} editable={canEdit} onSaved={(next,time)=>{setDesign(next);setPlan({...plan,updated_at:time});}}/> }
   {active==="vision"&&<section className="card institutional-card">
    <h2>الهوية والتوجه الاستراتيجي</h2>
    {plan.status==="approved"&&<p className="good">نسخة معتمدة ومقفلة للتعديل؛ تُعرض البيانات أدناه للقراءة.</p>}
