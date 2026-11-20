@@ -108,3 +108,51 @@ textarea { resize:vertical; }
  .bosla-ws-detail-page {break-inside:auto;page-break-inside:auto;}
  .bosla-ws-detail-page .bosla-ws-table tr {break-inside:avoid;page-break-inside:avoid;}
 }
+
+
+/* Institutional planning workspace — scoped to preserve workshop screens. */
+.institutional-app {max-width:1200px;}
+.institutional-hero {background:linear-gradient(120deg,#073668,#0c6ba3);
+ color:#fff;border-radius:18px;padding:28px;display:flex;gap:18px;
+ align-items:center;justify-content:space-between;margin-bottom:19px;}
+.institutional-hero h1 {font-size:clamp(23px,3vw,34px);margin:8px 0 10px;line-height:1.35;}
+.institutional-hero p {margin:4px 0;line-height:1.8;}
+.institutional-kicker {color:#c9e9ff;font-weight:700;letter-spacing:.025em;font-size:13px;}
+.institutional-hero .chip,.institutional-back {background:#fff;color:#073668;border:0;
+ padding:9px 15px;border-radius:10px;text-decoration:none;white-space:nowrap;}
+.institutional-back {display:inline-block;margin-bottom:9px;font-size:13px;}
+.institutional-pill {background:#e6f2ff;color:#0b4a87;border:1px solid #c0dffc;
+ border-radius:999px;padding:4px 10px;font-size:12px;display:inline-block;font-weight:700;}
+.institutional-card h2 {color:#12376b;font-size:21px;margin-top:0;}
+.institutional-form {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;align-items:end;}
+.institutional-form label,.institutional-card .stack label {display:grid;gap:6px;font-weight:700;font-size:14px;}
+.institutional-span {grid-column:1/-1;}
+.institutional-form .primary {justify-self:stretch;}
+.institutional-plan-list {display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;}
+.institutional-plan-card {display:flex;flex-direction:column;gap:10px;padding:17px;
+ border-radius:14px;border:1px solid #cbd9ea;background:#f9fcff;text-decoration:none;color:#12376b;}
+.institutional-plan-card:hover {border-color:#1479aa;box-shadow:0 4px 12px #12376b13;}
+.institutional-plan-card strong {font-size:17px;overflow-wrap:anywhere;}
+.institutional-plan-card small {color:#60758e;}
+.institutional-metrics {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin-bottom:10px;}
+.institutional-metrics>div {background:#fff;border:1px solid #d9e7f2;border-radius:13px;padding:16px;
+ display:flex;flex-direction:column;gap:8px;}
+.institutional-metrics strong {font-size:25px;color:#084c8c;overflow-wrap:anywhere;}
+.institutional-metrics small {color:#60758e;}
+.institutional-tabs {display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 16px;}
+.institutional-tabs button {flex:1;min-width:160px;}
+.institutional-actions {display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.institutional-records {display:grid;gap:10px;margin-top:18px;}
+.institutional-record {border:1px solid #dae5f1;background:#f9fbff;border-radius:12px;
+ padding:14px;display:flex;justify-content:space-between;align-items:start;gap:16px;}
+.institutional-record>div {min-width:0;overflow-wrap:anywhere;}
+.institutional-record h3 {font-size:17px;color:#0c3b70;margin:10px 0;}
+.institutional-record p {margin:7px 0;line-height:1.65;}
+.institutional-record small {color:#60758e;line-height:1.8;}
+@media(max-width:680px){
+ .institutional-hero {align-items:flex-start;flex-direction:column;padding:19px;}
+ .institutional-form {grid-template-columns:1fr;}
+ .institutional-metrics {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .institutional-record {flex-direction:column;}
+ .institutional-tabs button {min-width:calc(50% - 6px);}
+}
