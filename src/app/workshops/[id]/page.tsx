@@ -25,27 +25,34 @@ export default function WorkshopPage(){
  const[showResults,setShowResults]=useState(false);const[busy,setBusy]=useState(false);const[loading,setLoading]=useState(true);
  const[error,setError]=useState("");const[notice,setNotice]=useState("");
 
+ const [loadStep,setLoadStep]=useState("فتح صفحة الورشة");
+ const [slowLoad,setSlowLoad]=useState(false);
  const load=useCallback(async()=>{
+  setLoadStep("التحقق من تسجيل الدخول");
   const {data:auth,error:authError}=await supabase.auth.getUser();
   if(authError||!auth.user){router.replace("/login?next="+encodeURIComponent(window.location.pathname+window.location.search));return;}
   const uid=auth.user.id;setUserId(uid);
+  setLoadStep("التحقق من صلاحيات الحساب");
   const adminResult=await supabase.rpc("planning_is_platform_admin");
   if(adminResult.error)throw adminResult.error;
   setPlatformAdmin(adminResult.data===true);
   const preferredName=String(auth.user.user_metadata?.full_name || auth.user.email?.split("@")[0] || "مشارك");
   const name=preferredName.trim().length>=2?preferredName.trim().slice(0,120):"مشارك";
+  setLoadStep("تحميل الملف الشخصي");
   const ownProfile=await supabase.from("planning_profiles").upsert({id:uid,full_name:name},{onConflict:"id"});
   if(ownProfile.error)throw ownProfile.error;
   if(new URLSearchParams(window.location.search).has("code")){
    window.history.replaceState(null,"",window.location.pathname);
    setNotice("انتهت صلاحية روابط الدعوة العامة. يضيف مدير بوصلة المشاركين مباشرة.");
   }
+  setLoadStep("تحميل بيانات الورشة");
   const w=await supabase.from("planning_workshops")
    .select("id,organization_id,title,planning_year,workshop_date,created_by,open_stages,allow_individual,vote_open,status")
    .eq("id",id).maybeSingle();
   if(w.error)throw w.error;
   if(!w.data){setWorkshop(null);return;}
   setWorkshop(w.data as Workshop);
+  setLoadStep("تحميل المجموعات وإجابات الورشة");
   const queries=await Promise.all([
    supabase.from("planning_groups").select("id,organization_id,workshop_id,name").eq("workshop_id",id).order("name"),
    supabase.from("planning_participants").select("id,organization_id,workshop_id,user_id,group_id,workshop_role,is_recorder,display_name")
@@ -70,8 +77,9 @@ export default function WorkshopPage(){
  },[id,router]);
  useEffect(()=>{
   let mounted=true;
-  load().catch(e=>{if(mounted)setError(err(e));}).finally(()=>{if(mounted)setLoading(false);});
-  return()=>{mounted=false;};
+  const timer=window.setTimeout(()=>setSlowLoad(true),15000);
+  load().catch(e=>{if(mounted)setError(err(e));}).finally(()=>{window.clearTimeout(timer);if(mounted)setLoading(false);});
+  return()=>{mounted=false;window.clearTimeout(timer);};
  },[load]);
 
  const me=participants.find(p=>p.user_id===userId);
@@ -181,7 +189,16 @@ export default function WorkshopPage(){
    setNotice("تم تحضير ملف Excel بأوراق منفصلة لكل مخرجات الورشة.");
   }catch(e){setError(err(e));}finally{setBusy(false);}}
 
- if(loading)return <main className="wrap">جارٍ تحميل الورشة...</main>;
+ if(loading)return <main className="wrap"><section className="card">
+  <h1>جارٍ تحميل الورشة…</h1>
+  <p role="status">{loadStep}</p>
+  {slowLoad&&<p>استغرق الاتصال وقتًا أطول من المعتاد. يمكنك الانتظار أو إعادة المحاولة.</p>}
+  <a href="">إعادة المحاولة</a> · <a href="/dashboard">العودة إلى لوحة التحكم</a>
+ </section></main>;
+ if(error&&!workshop)return <main className="wrap"><section className="card">
+  <h1>تعذّر فتح الورشة</h1><p>{loadStep}</p><p role="alert">{error}</p>
+  <a href="">إعادة المحاولة</a> · <a href="/dashboard">العودة إلى لوحة التحكم</a>
+ </section></main>;
  if(!workshop)return <main className="wrap"><Link href="/dashboard">العودة</Link><section className="card">
  <h1>الورشة غير متاحة لهذا الحساب</h1>
  <p>ليس لديك صلاحية دخول هذه الورشة بعد. اطلب من مدير بوصلة إضافتك بحسابك المسجّل.</p>
