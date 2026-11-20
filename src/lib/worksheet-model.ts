@@ -40,7 +40,7 @@ export function worksheetLines(g:WorksheetGroup,stage:number,key:string,max=5):s
   return [...lines.slice(0,max-1),lines.slice(max-1).join("؛ ")];
 }
 export function worksheetPairs(g:WorksheetGroup,stage:number,key:string,max=4):[string,string][]{
-  return worksheetLines(g,stage,key,max).map(line=>{
+  return worksheetLines(g,stage,key,max).map((line):[string,string]=>{
     const separator=line.match(/\s*[|\t:]\s*/);
     if(!separator)return [line,""];
     const at=separator.index??line.length;
