@@ -1,5 +1,6 @@
 "use client";
-import {useCallback,useEffect,useState,type FormEvent} from "react";
+import {useCallback,useEffect,useRef,useState,type FormEvent} from "react";
+import {createLatestWriteQueue} from "@/lib/latest-write-queue";
 import FormReviewPanel from "@/components/FormReviewPanel";
 import WorksheetPrint from "@/components/WorksheetPrint";
 import {reviewSource,type FormReview} from "@/lib/form-review";
@@ -14,6 +15,7 @@ function err(e:unknown):string {return e instanceof Error?e.message:String(e&&ty
 function draftKey(stage:number,field:string,scope:string,owner:string){return [stage,field,scope,owner].join("|");}
 
 type StageDecision={stage:number;content:string;decided_by:string;revision:number};
+type SaveTask={key:string;field:string;text:string;stage:number;scope:"group"|"individual";owner:string;version:number};
 function roleLabel(facilitator:boolean,recorder:boolean,inGroup:boolean){
  if(facilitator)return recorder?"ميسّر الورشة ومقرّر المجموعة":"ميسّر الورشة";
  if(recorder)return "مقرّر المجموعة";
@@ -27,7 +29,20 @@ export default function WorkshopPage(){
  const[groups,setGroups]=useState<Group[]>([]);const[participants,setParticipants]=useState<Participant[]>([]);
  const[answers,setAnswers]=useState<Answer[]>([]);const[priorities,setPriorities]=useState<Priority[]>([]);const[votes,setVotes]=useState<Vote[]>([]);
  const[drafts,setDrafts]=useState<Record<string,string>>({});const[saveStatus,setSaveStatus]=useState<Record<string,string>>({});
- const[timers]=useState(()=>({current:{} as Record<string,ReturnType<typeof setTimeout>>}));
+ const timers=useRef<Record<string,ReturnType<typeof setTimeout>>>({});
+ const answerCache=useRef<Answer[]>([]);
+ const versions=useRef<Record<string,number>>({});
+ const savedVersions=useRef<Record<string,number>>({});
+ const persistRef=useRef<(task:SaveTask)=>Promise<void>>(async()=>{throw new Error("الحفظ غير جاهز");});
+ const [writeQueue]=useState(()=>createLatestWriteQueue<SaveTask>(
+   task=>persistRef.current(task),
+   (task,event,error)=>{
+     if(event==="saved")savedVersions.current[task.key]=task.version;
+     const message=event==="saving"?"جارٍ الحفظ...":event==="saved"?"تم الحفظ":"فشل الحفظ: "+err(error);
+     setSaveStatus(p=>({...p,[task.key]:message}));
+   },
+   task=>versions.current[task.key]===task.version
+ ));
  const[stage,setStage]=useState(1);const[scope,setScope]=useState<"group"|"individual">("group");
  const[selectedGroup,setSelectedGroup]=useState("");const[groupName,setGroupName]=useState("");
  const[platformAdmin,setPlatformAdmin]=useState(false);
@@ -88,12 +103,15 @@ export default function WorkshopPage(){
   setAdminIds(queries[5].data??[]);setDecisions(queries[6].data??[]);
   const gs=(queries[0].data??[]) as Group[];
   const as=(queries[2].data??[]) as Answer[];
+  answerCache.current=as;
   setGroups(gs);setParticipants((queries[1].data??[]) as Participant[]);setAnswers(as);
   setPriorities((queries[3].data??[]) as Priority[]);setVotes((queries[4].data??[]) as Vote[]);
   setSelectedGroup(prev=>gs.some(g=>g.id===prev)?prev:gs[0]?.id||"");
   setDrafts(prev=>{
-   const copy={...prev};for(const a of as){const key=draftKey(a.stage,a.field_key,a.scope,a.owner_id);
-    if(!(key in copy))copy[key]=a.content;
+   const copy={...prev};for(const a of as){
+    const key=draftKey(a.stage,a.field_key,a.scope,a.owner_id);
+    // Refresh clean fields from the server while retaining local unsaved edits.
+    if((versions.current[key]??0)===(savedVersions.current[key]??0))copy[key]=a.content;
    }return copy;
   });
  },[id,router]);
@@ -154,31 +172,64 @@ export default function WorkshopPage(){
    setNotice("تمت إضافة المشارك. افتح واتساب أدناه واضغط إرسال؛ الرسالة لا تُرسل تلقائيًا.");
   }catch(e){setError(err(e));}finally{setBusy(false);}
  }
- async function save(field:string,text:string,s:number,sc:"group"|"individual",owner:string){
+ // Supabase persistence is always called by the serialized per-field queue.
+ persistRef.current=async({field,text,stage:s,scope:sc,owner}:SaveTask)=>{
+  if(!workshop||!owner||!userId)throw new Error("سجّل الدخول مجددًا قبل الحفظ.");
+  const find=(a:Answer)=>a.stage===s&&a.field_key===field&&a.scope===sc&&a.owner_id===owner;
+  const columns="id,organization_id,workshop_id,stage,field_key,scope,owner_id,content,created_by,updated_by,updated_at";
+  let existing=answerCache.current.find(find);
+  if(!existing){
+   const lookup=await supabase.from("planning_answers").select(columns)
+    .eq("workshop_id",id).eq("stage",s).eq("field_key",field)
+    .eq("scope",sc).eq("owner_id",owner).maybeSingle();
+   if(lookup.error)throw lookup.error;
+   existing=lookup.data as Answer|undefined;
+  }
+  let result=existing?await supabase.from("planning_answers").update({content:text})
+   .eq("id",existing.id).select(columns).single():
+   await supabase.from("planning_answers").insert({organization_id:workshop.organization_id,
+    workshop_id:id,stage:s,field_key:field,scope:sc,owner_id:owner,content:text,
+    created_by:userId,updated_by:userId}).select(columns).single();
+  // A separate tab/user may have inserted the answer after the lookup.
+  if(result.error?.code==="23505"){
+   const lookup=await supabase.from("planning_answers").select(columns)
+    .eq("workshop_id",id).eq("stage",s).eq("field_key",field)
+    .eq("scope",sc).eq("owner_id",owner).maybeSingle();
+   if(lookup.error)throw lookup.error;
+   if(!lookup.data)throw result.error;
+   result=await supabase.from("planning_answers").update({content:text})
+    .eq("id",lookup.data.id).select(columns).single();
+  }
+  if(result.error)throw result.error;
+  const saved=result.data as Answer;
+  answerCache.current=[...answerCache.current.filter(a=>a.id!==saved.id),saved];
+  setAnswers(answerCache.current);
+ };
+ function save(field:string,text:string,s:number,sc:"group"|"individual",owner:string,version?:number){
   if(!workshop||!owner||!userId)return;
-  const key=draftKey(s,field,sc,owner);clearTimeout(timers.current[key]);
-  setSaveStatus(p=>({...p,[key]:"جارٍ الحفظ..."}));
-  try{
-   const existing=answers.find(a=>a.stage===s&&a.field_key===field&&a.scope===sc&&a.owner_id===owner);
-   const columns="id,organization_id,workshop_id,stage,field_key,scope,owner_id,content,created_by,updated_by,updated_at";
-   const query=existing?supabase.from("planning_answers").update({content:text}).eq("id",existing.id):
-    supabase.from("planning_answers").insert({organization_id:workshop.organization_id,
-      workshop_id:id,stage:s,field_key:field,scope:sc,owner_id:owner,content:text,
-      created_by:userId,updated_by:userId});
-   const result=await query.select(columns).single();
-   if(result.error)throw result.error;const saved=result.data as Answer;
-   setAnswers(old=>[...old.filter(a=>a.id!==saved.id),saved]);
-   setSaveStatus(p=>({...p,[key]:"تم الحفظ"}));
-  }catch(e){setSaveStatus(p=>({...p,[key]:"فشل الحفظ: "+err(e)}));}
+  const key=draftKey(s,field,sc,owner);
+  clearTimeout(timers.current[key]);
+  writeQueue.enqueue({key,field,text,stage:s,scope:sc,owner,version:version??versions.current[key]??0});
  }
- function edit(field:string,value:string){if(!editable||!ownerId)return;
+ function edit(field:string,value:string){
+  if(!editable||!ownerId)return;
   const s=stage,sc=scope,owner=ownerId,key=draftKey(s,field,sc,owner);
-  setDrafts(p=>({...p,[key]:value}));setSaveStatus(p=>({...p,[key]:"تغييرات غير محفوظة..."}));
-  clearTimeout(timers.current[key]);timers.current[key]=setTimeout(()=>void save(field,value,s,sc,owner),800);
+  const version=(versions.current[key]??0)+1;
+  versions.current[key]=version;
+  setDrafts(p=>({...p,[key]:value}));
+  setSaveStatus(p=>({...p,[key]:"تغييرات غير محفوظة..."}));
+  clearTimeout(timers.current[key]);
+  timers.current[key]=setTimeout(()=>save(field,value,s,sc,owner,version),800);
  }
- function flush(field:string){if(!editable||!ownerId)return;
+ function flush(field:string){
+  if(!editable||!ownerId)return;
   const key=draftKey(stage,field,scope,ownerId);
-  if(saveStatus[key]==="تغييرات غير محفوظة...")void save(field,drafts[key]||"",stage,scope,ownerId);
+  if((versions.current[key]??0)!==(savedVersions.current[key]??0)){
+   save(field,drafts[key]??"",stage,scope,ownerId);
+  }
+ }
+ function hasPendingEdits(){
+  return Object.keys(versions.current).some(key=>(versions.current[key]??0)!==(savedVersions.current[key]??0));
  }
 
  async function refreshVotes(){const [p,v]=await Promise.all([
@@ -207,9 +258,11 @@ export default function WorkshopPage(){
       workshop_id:id,priority_id:p.id,user_id:userId});
    if(result.error)throw result.error;await refreshVotes();
   }catch(e){setError(err(e));}finally{setBusy(false);}}
- async function excel(){if(!workshop||!facilitator||busy)return;setBusy(true);setError("");
+ async function excel(){if(!workshop||!facilitator||busy)return;
+  if(hasPendingEdits()){setNotice("توجد تغييرات غير محفوظة. تحقّق من الحفظ أو أعد المحاولة قبل التصدير.");return;}
+  setBusy(true);setError("");
   try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes,decisions,reviews,organizationName);
-   setNotice("تم تحضير Excel بالأوراق المصممة (1–3) لكل مجموعة، مع ملحق البيانات الأصلية.");
+   setNotice("تم تحضير Excel بالنماذج الخمسة لكل مجموعة، مع ملاحق البيانات الأصلية.");
   }catch(e){setError(err(e));}finally{setBusy(false);}}
 
  if(loading)return <main className="wrap"><section className="card">
@@ -313,6 +366,8 @@ export default function WorkshopPage(){
     stage===3&&f.key==="goal_priorities"?"اكتب أولوية كل هدف في سطر: مرتفع، متوسط، منخفض":""}
    value={value} onChange={e=>edit(f.key,e.target.value)} onBlur={()=>flush(f.key)}/>
   <small className={saveStatus[key]?.startsWith("فشل")?"error":"muted"} role="status">{saveStatus[key]||""}</small>
+  {saveStatus[key]?.startsWith("فشل")&&editable&&<button type="button" className="secondary"
+   onClick={()=>save(f.key,value,stage,scope,ownerId)}>إعادة محاولة الحفظ</button>}
   </label>;
  })}</div>
  </section>}
@@ -336,8 +391,10 @@ export default function WorkshopPage(){
  </section>}
  {showResults&&facilitator&&<section className="card worksheet-print-host">
  <h2>المخرجات النهائية للورشة</h2>
- <div className="toolbar no-print"><button className="primary" disabled={busy} onClick={()=>void excel()}>تصدير Excel</button>
- <button className="secondary" onClick={()=>window.print()}>حفظ PDF / طباعة النماذج</button></div>
+ <div className="toolbar no-print"><button className="primary" disabled={busy||hasPendingEdits()} onClick={()=>void excel()}>تصدير Excel</button>
+ <button className="secondary" disabled={hasPendingEdits()} onClick={()=>window.print()}>حفظ PDF / طباعة النماذج</button></div>
+ {hasPendingEdits()&&<p className="error no-print" role="alert">توجد تغييرات غير محفوظة. راجع حالة الحفظ في حقول الورشة، ثم صدّر النسخة المكتملة.</p>}
+ <p className="muted no-print">الأوراق الخمس لكل مجموعة تعرض مدخلات المجموعة الأصلية. الصياغات المعتمدة للميسّر محفوظة في قسم منفصل داخل النتائج وExcel.</p>
  <WorksheetPrint workshop={workshop} answers={answers} groups={groups} participants={participants} organizationName={organizationName}/>
  <h3>النماذج المعتمدة</h3>
  {!reviews.some(r=>r.finalized_at)&&<p>لم يُعتمد نموذج كامل بعد.</p>}
