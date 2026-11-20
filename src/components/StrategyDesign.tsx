@@ -2,7 +2,7 @@
 import {useState,type FormEvent} from "react";
 import {supabase} from "@/lib/supabase";
 import StrategyDecision from "./StrategyDecision";
-import {methods,quadrants,readDesign,workshopAgenda,type Factor,type Method,type Design} from "@/lib/strategy-design";
+import {methods,quadrants,readDesign,prepareWorkshop,sectorPreparation,type Factor,type Method,type Design} from "@/lib/strategy-design";
 
 const blankFactor=():Factor=>({id:"",method:"PESTEL",category:"سياسي",statement:"",quadrant:"فرصة",source:"",date:""});
 
@@ -17,6 +17,8 @@ export default function StrategyDesign({planId,initial,stamp,editable,onSaved}:{
  const [route,setRoute]=useState(data?.route??"");
  const [sector,setSector]=useState(data?.sector??"");
  const [duration,setDuration]=useState(data?.duration??"");
+ const [minutes,setMinutes]=useState(data?.workshopMinutes?.toString()??"");
+ const workshop=prepareWorkshop(route,sector,minutes?Number(minutes):undefined);
  if(!data)return <p role="alert">تعذّر قراءة سجل تحليل هذه الخطة. يرجى مراجعة النسخة المحفوظة.</p>;
  async function save(next:Design){
   if(!editable||busy)return false;
@@ -39,13 +41,17 @@ export default function StrategyDesign({planId,initial,stamp,editable,onSaved}:{
  }
  return <section className="card institutional-card stack">
   <h2>بناء الاستراتيجية وتحليل البيئة</h2>
-  {editable?<form className="stack" onSubmit={e=>{e.preventDefault();void save({...data,route,sector:sector.trim(),duration:duration.trim()});}}>
+  {editable?<form className="stack" onSubmit={e=>{e.preventDefault();void save({...data,route,sector:sector.trim(),duration:duration.trim(),workshopMinutes:minutes?Number(minutes):undefined});}}>
    <label>مسار المؤسسة<select className="field" required value={route} onChange={e=>setRoute(e.target.value)}><option value="">اختر المسار</option>{["تحديث استراتيجية قائمة","بناء استراتيجية جديدة"].map(x=><option key={x}>{x}</option>)}</select></label>
-   <label>القطاع<input className="field" value={sector} maxLength={150} onChange={e=>setSector(e.target.value)}/></label>
-   <label>الوقت المتاح للورشة<input className="field" value={duration} placeholder="مثلاً يومان" maxLength={100} onChange={e=>setDuration(e.target.value)}/></label>
+   <label>القطاع<input className="field" value={sector} list="workshop-sectors" maxLength={150} onChange={e=>setSector(e.target.value)}/></label>
+   <datalist id="workshop-sectors">{Object.keys(sectorPreparation).map(s=><option key={s} value={s}/>)}</datalist>
+   <label>أيام الورشة أو مواعيدها<input className="field" value={duration} placeholder="مثلاً يومان" maxLength={100} onChange={e=>setDuration(e.target.value)}/></label>
+   <label>دقائق العمل الفعلية في الورشة بعد خصم الاستراحات<input className="field" type="number" min={4} max={10080} step={1} value={minutes} onChange={e=>setMinutes(e.target.value)}/></label>
    <button disabled={busy} className="primary">حفظ إعدادات الورشة</button>
   </form>:<p>{[data.route,data.sector,data.duration].filter(Boolean).join(" • ")}</p>}
-  {route&&<details open><summary>جدول الورشة المقترح</summary><ol>{workshopAgenda(route).map(x=><li key={x}>{x}</li>)}</ol></details>}
+  {route&&<details open><summary>جدول الورشة المقترح</summary><p>{workshop.preparation}</p><p>{workshop.sectorQuestion}</p>
+   <ol>{workshop.sessions.map(session=><li key={session.title}><strong>{session.title}</strong>
+    {session.minutes!==null&&<span> · {session.minutes} دقيقة</span>}<p>المخرج المطلوب: {session.output}</p></li>)}</ol></details>}
   <h3>سجل العوامل والأدلة</h3>
   {editable&&<form className="stack" onSubmit={saveFactor}>
    <label>المنهجية<select className="field" value={factor.method} onChange={e=>{const method=e.target.value as Method;setFactor({...factor,method,category:methods[method][0]});}}>{Object.keys(methods).map(x=><option key={x}>{x}</option>)}</select></label>
