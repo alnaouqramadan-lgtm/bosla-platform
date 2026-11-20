@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import FormReviewPanel from "@/components/FormReviewPanel";
+import WorkshopPrintReport from "@/components/WorkshopPrintReport";
 import {reviewSource,type FormReview} from "@/lib/form-review";
 import Link from "next/link";
 import {useParams,useRouter} from "next/navigation";
@@ -327,10 +328,10 @@ export default function WorkshopPage(){
  })}
  <p className="muted">التصويت {workshop.vote_open?"مفتوح":"مغلق"} حاليًا</p>
  </section>}
- {showResults&&facilitator&&<section className="card">
+ {showResults&&facilitator&&<section className="card no-print">
  <h2>المخرجات النهائية للورشة</h2>
  <div className="toolbar no-print"><button className="primary" disabled={busy} onClick={()=>void excel()}>تصدير Excel</button>
- <button className="secondary" onClick={()=>window.print()}>طباعة التقرير</button></div>
+ <button className="secondary" onClick={()=>window.print()}>طباعة / حفظ PDF بالنماذج الجديدة</button></div>
  <h3>النماذج المعتمدة</h3>
  {!reviews.some(r=>r.finalized_at)&&<p>لم يُعتمد نموذج كامل بعد.</p>}
  {reviews.filter(r=>r.finalized_at).map(r=><section key={r.stage}><h3>{STAGES[r.stage-1].name}</h3>
@@ -354,5 +355,6 @@ export default function WorkshopPage(){
  {[...priorities].sort((a,b)=>votes.filter(v=>v.priority_id===b.id).length-votes.filter(v=>v.priority_id===a.id).length)
   .map(p=><p key={p.id}>{p.label} — {votes.filter(v=>v.priority_id===p.id).length} صوت</p>)}
  </section>}
+ {showResults&&facilitator&&<WorkshopPrintReport workshop={workshop} reviews={reviews}/>}
  </main>;
 }
