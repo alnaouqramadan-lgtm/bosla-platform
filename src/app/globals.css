@@ -156,3 +156,14 @@ textarea { resize:vertical; }
  .institutional-record {flex-direction:column;}
  .institutional-tabs button {min-width:calc(50% - 6px);}
 }
+
+
+/* BOSLA institutional approval and evidence-based follow-up. */
+.institutional-followup-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:18px 0}
+.institutional-followup-panel{border:1px solid #d7e3f1;border-radius:14px;padding:17px;background:#f9fcff;min-width:0}
+.institutional-followup-panel h3{color:#12376b;margin-top:0}
+.institutional-followup-panel label{display:grid;gap:6px;font-weight:700;font-size:14px}
+.institutional-followup-panel .field{font-weight:400}
+.institutional-card details{border-top:1px solid #dce5f0;margin-top:20px;padding:12px 0}
+.institutional-card details summary{font-weight:700;cursor:pointer;color:#12376b}
+@media(max-width:760px){.institutional-followup-grid{grid-template-columns:1fr}}
