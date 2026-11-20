@@ -9,6 +9,7 @@ export default function Dashboard(){
  const router=useRouter();
  const[userId,setUserId]=useState(""); const[myName,setMyName]=useState("");
  const[orgs,setOrgs]=useState<Organization[]>([]); const[workshops,setWorkshops]=useState<Workshop[]>([]);
+ const[platformAdmin,setPlatformAdmin]=useState(false);
  const[selectedOrg,setSelectedOrg]=useState("");
  const[orgName,setOrgName]=useState(""); const[title,setTitle]=useState("");
  const[year,setYear]=useState(new Date().getFullYear());
@@ -23,11 +24,14 @@ export default function Dashboard(){
    .select("full_name").single();
   if(profile.error)throw profile.error;
   setMyName(profile.data?.full_name??safeName);
-  const [o,w]=await Promise.all([
+  const [o,w,admin]=await Promise.all([
    supabase.from("planning_organizations").select("id,name,owner_id").order("created_at",{ascending:false}),
    supabase.from("planning_workshops").select("id,organization_id,title,planning_year,workshop_date,created_by,open_stages,allow_individual,vote_open,status")
     .order("created_at",{ascending:false}),
+   supabase.rpc("planning_is_platform_admin"),
   ]);
+  if(admin.error)throw admin.error;
+  setPlatformAdmin(admin.data===true);
   if(o.error)throw o.error;if(w.error)throw w.error;
   const organizations=(o.data??[]) as Organization[];
   setOrgs(organizations);setWorkshops((w.data??[]) as Workshop[]);
@@ -35,12 +39,12 @@ export default function Dashboard(){
  },[router]);
  useEffect(()=>{let mounted=true;load().catch(e=>{if(mounted)setError(String(e.message||e));})
  .finally(()=>{if(mounted)setLoading(false);});return()=>{mounted=false};},[load]);
- async function createOrg(e:FormEvent){e.preventDefault();if(busy||!userId)return;setBusy(true);setError("");
+ async function createOrg(e:FormEvent){e.preventDefault();if(!platformAdmin||busy||!userId)return;setBusy(true);setError("");
   try{const result=await supabase.from("planning_organizations").insert({name:orgName.trim(),owner_id:userId}).select("id").single();
    if(result.error)throw result.error;setSelectedOrg(result.data.id);setOrgName("");setNotice("تم إنشاء المؤسسة الجديدة.");await load();
   }catch(e){setError(String((e as Error).message||e));}finally{setBusy(false);}
  }
- async function createWorkshop(e:FormEvent){e.preventDefault();if(busy||!userId||!selectedOrg)return;
+ async function createWorkshop(e:FormEvent){e.preventDefault();if(!platformAdmin||busy||!userId||!selectedOrg)return;
   setBusy(true);setError("");
   try{const code=crypto.randomUUID()+"-"+crypto.randomUUID();
    const binary=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(code));
@@ -60,7 +64,7 @@ export default function Dashboard(){
  </header>
  {error&&<p className="error" role="alert">{error}</p>}{notice&&<p className="good" role="status">{notice}</p>}
  {loading&&<p>جارٍ التحميل...</p>}
- <div className="two-cols">
+ {platformAdmin&&<><div className="two-cols">
  <section className="card"><h2>مؤسسة جديدة</h2>
  <form className="stack" onSubmit={createOrg}>
  <label>اسم المؤسسة<input required minLength={2} maxLength={200} className="field" value={orgName} onChange={e=>setOrgName(e.target.value)}/></label>
@@ -70,7 +74,7 @@ export default function Dashboard(){
  <p className="muted">إضافة المشاركين تتم حصريًا بواسطة مدير بوصلة من داخل صفحة الورشة. بعد الإضافة يُجهَّز رابط واتساب للإرسال يدويًا، ولا تُستخدم الدعوات البريدية.</p></section>
  </div>
  <section className="card"><h2>إنشاء ورشة تخطيط</h2>
- <p className="muted">صاحب المؤسسة يستطيع إنشاء الورش وإدارة أدوار الميسر والمشاركين.</p>
+ <p className="muted">اختر المؤسسة التي تريد إنشاء الورشة فيها.</p>
  <form className="two-cols" onSubmit={createWorkshop}>
  <label>المؤسسة<select className="field" value={selectedOrg} required onChange={e=>setSelectedOrg(e.target.value)}><option value="">اختر المؤسسة</option>
  {orgs.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></label>
@@ -80,8 +84,9 @@ export default function Dashboard(){
  <button className="primary" disabled={!selectedOrg||busy}>{busy?"جارٍ التنفيذ...":"إنشاء الورشة"}</button>
  </form>
  </section>
+ </>}
  <section className="card"><h2>ورشك المتاحة</h2>
- {!loading&&workshops.length===0&&<p>لم يتم إنشاء ورش أو الانضمام إليها بعد.</p>}
+ {!loading&&workshops.length===0&&<p>{platformAdmin?"لا توجد ورش متاحة بعد.":"ستظهر ورشتك هنا بعد أن يضيفك مدير بوصلة إليها."}</p>}
  <div className="two-cols">{workshops.map(w=><Link key={w.id} href={"/workshops/"+w.id} className="chip" style={{display:"block",textDecoration:"none",minHeight:95}}>
  <strong>{w.title}</strong><p className="muted">{w.planning_year} | {w.workshop_date} | {w.status==="active"?"نشطة":"مؤرشفة"}</p>
  </Link>)}</div></section>
