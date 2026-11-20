@@ -3,6 +3,7 @@ import {useCallback,useEffect,useState,type FormEvent} from "react";
 import {useParams,useRouter} from "next/navigation";
 import Link from "next/link";
 import {supabase} from "@/lib/supabase";
+import PlanGovernance from "@/components/PlanGovernance";
 import {
  optionalNonnegative,optionalNumber,splitApprovedGoals,validatePlanPeriod,frequencyLabels,
  type StrategicPlan,type StrategicGoal,type OperationalActivity,type PerformanceIndicator
@@ -15,7 +16,7 @@ const emptyActivity={goal_id:"",title:"",program_name:"",project_name:"",target_
  estimated_budget:"",currency_code:"ILS" as OperationalActivity["currency_code"],risk_notes:""};
 const emptyKpi={goal_id:"",title:"",unit:"",baseline:"",target:"",
  verification_source:"",frequency:"quarterly" as PerformanceIndicator["frequency"],methodology:""};
-type Section="vision"|"goals"|"activities"|"indicators";
+type Section="vision"|"goals"|"activities"|"indicators"|"governance";
 export default function InstitutionalPlan(){
  const {id}=useParams<{id:string}>();const router=useRouter();
  const [plan,setPlan]=useState<StrategicPlan|null>(null);
@@ -64,7 +65,7 @@ export default function InstitutionalPlan(){
   .finally(()=>{if(mounted)setLoading(false);});return()=>{mounted=false;};},[load]);
 
  async function action(run:()=>Promise<string>){
-  if(!plan||busy)return;
+  if(!plan||plan.status!=="draft"||busy)return;
   setBusy(true);setError("");setNotice("");
   try{const success=await run();await load();setNotice(success);}
   catch(e){setError(err(e));}
@@ -155,6 +156,7 @@ export default function InstitutionalPlan(){
   setError("");
  }
  async function remove(kind:"goal"|"activity"|"indicator",rowId:string){
+  if(plan?.status!=="draft"){setError("الخطة معتمدة ولا يُسمح بتغيير سجلاتها.");return;}
   const table=kind==="goal"?"planning_strategic_goals":kind==="activity"?"planning_operational_activities":"planning_performance_indicators";
   if(kind==="goal"&&(activities.some(a=>a.goal_id===rowId)||indicators.some(k=>k.goal_id===rowId))){
    setError("الهدف مرتبط بأنشطة أو مؤشرات. احذف الروابط أولًا قبل حذف الهدف.");return;
@@ -223,10 +225,10 @@ export default function InstitutionalPlan(){
  return <main className="wrap institutional-app" dir="rtl">
   <header className="institutional-hero">
    <div><Link href="/plans" className="institutional-back">← جميع الخطط</Link>
-    <p className="institutional-kicker">مسودة خطة قيد الإعداد</p>
+    <p className="institutional-kicker">{plan.status==="approved"?"الخطة الاستراتيجية والتشغيلية المعتمدة":"مسودة خطة قيد الإعداد"}</p>
     <h1>{plan.title}</h1>
     <p>الفترة: {plan.period_start} — {plan.period_end}</p></div>
-   <span className="institutional-pill">مسودة غير معتمدة</span>
+   <span className="institutional-pill">{plan.status==="approved"?"معتمدة بواسطة مالك المؤسسة":"مسودة غير معتمدة"}</span>
   </header>
   <div className="institutional-metrics">
    <div><strong>{goals.length}</strong><small>أهداف استراتيجية</small></div>
@@ -238,30 +240,35 @@ export default function InstitutionalPlan(){
   {error&&<p role="alert" className="card error">{error}</p>}
   {notice&&<p role="status" className="card good">{notice}</p>}
   <nav className="institutional-tabs" aria-label="أقسام الخطة">
-   {([["vision","التوجه الاستراتيجي"],["goals","الأهداف"],["activities","الخطة التشغيلية"],["indicators","مؤشرات الأداء"]] as const)
+   {([["vision","التوجه الاستراتيجي"],["goals","الأهداف"],["activities","الخطة التشغيلية"],["indicators","مؤشرات الأداء"],["governance","الاعتماد والمتابعة"]] as const)
     .map(([key,label])=><button key={key} className={active===key?"primary":"secondary"} onClick={()=>setActive(key)}>{label}</button>)}
   </nav>
   {active==="vision"&&<section className="card institutional-card">
    <h2>الهوية والتوجه الاستراتيجي</h2>
-   {plan.source_workshop_id&&<div className="institutional-actions">
+   {plan.status==="approved"&&<p className="good">نسخة معتمدة ومقفلة للتعديل؛ تُعرض البيانات أدناه للقراءة.</p>}
+   {plan.status==="draft"&&plan.source_workshop_id&&<div className="institutional-actions">
     <button type="button" className="secondary" disabled={busy} onClick={()=>void importApprovedSwot()}>استيراد تحليل SWOT المعتمد من ورشة المصدر</button>
    </div>}
    <p className="muted">اكتب الصياغة المؤسسية المعتمدة للنقاش. هذه مسودة قابلة للتعديل وليست اعتمادًا رسميًا.</p>
-   <form className="stack" onSubmit={saveDirection}>
+   {plan.status==="draft"?<form className="stack" onSubmit={saveDirection}>
     <label>الرؤية<textarea rows={3} maxLength={6000} className="field" value={draft.vision} onChange={e=>setDraft(p=>({...p,vision:e.target.value}))}/></label>
     <label>الرسالة<textarea rows={3} maxLength={6000} className="field" value={draft.mission} onChange={e=>setDraft(p=>({...p,mission:e.target.value}))}/></label>
     <label>القيم المؤسسية<textarea rows={3} maxLength={6000} className="field" value={draft.institutional_values} onChange={e=>setDraft(p=>({...p,institutional_values:e.target.value}))}/></label>
     <label>تحليل الواقع والبيئة / القضايا الاستراتيجية<textarea rows={5} maxLength={30000} className="field" value={draft.environmental_analysis} onChange={e=>setDraft(p=>({...p,environmental_analysis:e.target.value}))}/></label>
     <button className="primary" disabled={busy}>{busy?"جارٍ الحفظ…":"حفظ التوجه الاستراتيجي"}</button>
-   </form>
+   </form>:<div className="stack">
+    <p><strong>الرؤية:</strong> {plan.vision||"—"}</p><p><strong>الرسالة:</strong> {plan.mission||"—"}</p>
+    <p><strong>القيم:</strong> {plan.institutional_values||"—"}</p>
+    <p style={{whiteSpace:"pre-wrap"}}><strong>التحليل البيئي:</strong> {plan.environmental_analysis||"—"}</p>
+   </div>}
   </section>}
   {active==="goals"&&<section className="card institutional-card">
    <h2>الأهداف الاستراتيجية</h2>
-   {plan.source_workshop_id&&<div className="institutional-actions">
+   {plan.status==="draft"&&plan.source_workshop_id&&<div className="institutional-actions">
     <button className="secondary" type="button" disabled={busy} onClick={()=>void importApprovedGoals()}>استيراد الأهداف المعتمدة من ورشة المصدر</button>
     <Link className="chip" href={"/workshops/"+plan.source_workshop_id}>فتح ورشة المصدر</Link>
    </div>}
-   <form className="institutional-form" onSubmit={createGoal}>
+   {plan.status==="draft"&&<form className="institutional-form" onSubmit={createGoal}>
     <label>عنوان الهدف<input className="field" required minLength={3} maxLength={300} value={goal.title} onChange={e=>setGoal(p=>({...p,title:e.target.value}))}/></label>
     <label>المحور الاستراتيجي<input className="field" maxLength={300} value={goal.strategic_axis} onChange={e=>setGoal(p=>({...p,strategic_axis:e.target.value}))}/></label>
     <label>رمز الهدف<input className="field" maxLength={30} placeholder="G-01" value={goal.code} onChange={e=>setGoal(p=>({...p,code:e.target.value}))}/></label>
@@ -273,19 +280,19 @@ export default function InstitutionalPlan(){
      <button className="primary" disabled={busy}>{editingGoalId?"حفظ تعديل الهدف":"إضافة هدف استراتيجي"}</button>
      {editingGoalId&&<button type="button" className="secondary" disabled={busy} onClick={()=>{setEditingGoalId("");setGoal({title:"",description:"",strategic_axis:"",code:"",priority:3});}}>إلغاء التعديل</button>}
     </div>
-   </form>
+   </form>}
    <div className="institutional-records">{goals.map(g=><article key={g.id} className="institutional-record">
     <div><span className="institutional-pill">{g.code||"هدف"} • أولوية {g.priority}</span><h3>{g.title}</h3>
      <small>{g.strategic_axis}</small><p>{g.description}</p></div>
-    <div className="institutional-actions">
+    {plan.status==="draft"&&<div className="institutional-actions">
       <button className="secondary" disabled={busy} onClick={()=>beginGoalEdit(g)}>تعديل</button>
       <button className="secondary" disabled={busy} onClick={()=>void remove("goal",g.id)}>حذف</button>
-    </div>
+    </div>}
    </article>)}</div>
   </section>}
   {active==="activities"&&<section className="card institutional-card">
    <h2>الخطة التشغيلية وربط الأنشطة بالأهداف</h2>
-   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إدراج الأنشطة.</p>:<form className="institutional-form" onSubmit={createActivity}>
+   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إدراج الأنشطة.</p>:plan.status==="draft"?<form className="institutional-form" onSubmit={createActivity}>
     <label className="institutional-span">الهدف المرتبط<select className="field" required value={activity.goal_id} onChange={e=>setActivity(p=>({...p,goal_id:e.target.value}))}>
      {goals.map(g=><option key={g.id} value={g.id}>{g.title}</option>)}</select></label>
     <label>اسم النشاط<input className="field" required minLength={3} maxLength={300} value={activity.title} onChange={e=>setActivity(p=>({...p,title:e.target.value}))}/></label>
@@ -305,21 +312,21 @@ export default function InstitutionalPlan(){
      <button className="primary" disabled={busy||!activity.goal_id}>{editingActivityId?"حفظ تعديل النشاط":"إضافة النشاط إلى الخطة التشغيلية"}</button>
      {editingActivityId&&<button className="secondary" type="button" disabled={busy} onClick={()=>{setEditingActivityId("");setActivity({...emptyActivity,goal_id:goals[0]?.id??""});}}>إلغاء التعديل</button>}
     </div>
-   </form>}
+   </form>:<p className="muted">الأنشطة التالية جزء من الخطة المعتمدة؛ يمكن تحديث إنجازها من تبويب الاعتماد والمتابعة.</p>}
    <div className="institutional-records">{activities.map(a=><article key={a.id} className="institutional-record">
     <div><span className="institutional-pill">{a.program_name||"برنامج غير محدد"}</span><h3>{a.title}</h3>
      <p><strong>الهدف:</strong> {goalName(a.goal_id)}</p>
      <small>{a.owner_name||"مسؤول غير محدد"} • {a.planned_start||"—"} إلى {a.planned_end||"—"}</small>
      <p>المستهدف: {n(a.target_quantity)} {a.target_unit} • التكلفة: {n(a.estimated_budget)} {a.currency_code}</p></div>
-    <div className="institutional-actions">
+    {plan.status==="draft"&&<div className="institutional-actions">
      <button className="secondary" disabled={busy} onClick={()=>beginActivityEdit(a)}>تعديل</button>
      <button className="secondary" disabled={busy} onClick={()=>void remove("activity",a.id)}>حذف</button>
-    </div>
+    </div>}
    </article>)}</div>
   </section>}
   {active==="indicators"&&<section className="card institutional-card">
    <h2>مؤشرات قياس النجاح KPI</h2>
-   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إنشاء مؤشرات الأداء.</p>:<form className="institutional-form" onSubmit={createKpi}>
+   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إنشاء مؤشرات الأداء.</p>:plan.status==="draft"?<form className="institutional-form" onSubmit={createKpi}>
     <label className="institutional-span">الهدف الاستراتيجي<select required className="field" value={kpi.goal_id} onChange={e=>setKpi(p=>({...p,goal_id:e.target.value}))}>
      {goals.map(g=><option key={g.id} value={g.id}>{g.title}</option>)}</select></label>
     <label>اسم المؤشر<input required minLength={3} maxLength={300} className="field" value={kpi.title} onChange={e=>setKpi(p=>({...p,title:e.target.value}))}/></label>
@@ -334,20 +341,21 @@ export default function InstitutionalPlan(){
      <button className="primary" disabled={busy||!kpi.goal_id}>{editingKpiId?"حفظ تعديل المؤشر":"إضافة المؤشر"}</button>
      {editingKpiId&&<button className="secondary" type="button" disabled={busy} onClick={()=>{setEditingKpiId("");setKpi({...emptyKpi,goal_id:goals[0]?.id??""});}}>إلغاء التعديل</button>}
     </div>
-   </form>}
+   </form>:<p className="muted">المؤشرات المعتمدة مقفلة، وتُدخل قراءاتها الفعلية من تبويب الاعتماد والمتابعة.</p>}
    <div className="institutional-records">{indicators.map(k=><article key={k.id} className="institutional-record">
     <div><span className="institutional-pill">{frequencyLabels[k.frequency]}</span><h3>{k.title}</h3>
      <p><strong>الهدف:</strong> {goalName(k.goal_id)}</p>
      <small>خط الأساس: {n(k.baseline)} • المستهدف: {n(k.target)} {k.unit} • المصدر: {k.verification_source||"غير محدد"}</small></div>
-    <div className="institutional-actions">
+    {plan.status==="draft"&&<div className="institutional-actions">
      <button className="secondary" disabled={busy} onClick={()=>beginKpiEdit(k)}>تعديل</button>
      <button className="secondary" disabled={busy} onClick={()=>void remove("indicator",k.id)}>حذف</button>
-    </div>
+    </div>}
    </article>)}</div>
   </section>}
+  {active==="governance"&&<PlanGovernance plan={plan} activities={activities} indicators={indicators} onReload={load}/>}
   <footer className="card">
    <strong>ضوابط اعتماد الخطة</strong>
-   <p className="muted">هذه نسخة إعداد أولية. تسجيل الإنجازات وإقرار الخطة ونشر الإصدارات النهائية غير مفعّل بعد، ولن تُحتسب نسب الإنجاز تلقائيًا من عدد الأنشطة.</p>
+   <p className="muted">هذه نسخة إعداد أولية. تُعتمد الخطة حاليًا بواسطة مالك المؤسسة، وتُقفل النسخة المرجعية. تُسجّل تحديثات التنفيذ والقياسات في سجل تاريخي، دون افتراض تحقق النتائج الاستراتيجية من عدد الأنشطة وحده. الاعتماد متعدد المستويات وطلبات تغيير النسخ اللاحقة من تطوير المرحلة التالية.</p>
   </footer>
  </main>;
 }
