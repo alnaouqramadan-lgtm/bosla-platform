@@ -13,7 +13,7 @@ export async function POST(request:Request){
  const form=Number.isInteger(stage)?STAGES[stage-1]:undefined;
  const field=form?.fields.find(f=>f.key===key);
  if(typeof workshopId!=="string"||!/^[0-9a-f-]{36}$/i.test(workshopId)||!field||!Number.isInteger(revision))return fail("طلب الصياغة غير صالح.",400);
- const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,{
+ const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,(process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)!,{
   global:{headers:{Authorization:authorization}},auth:{persistSession:false,autoRefreshToken:false}
  });
  const [reviews,legacy,workshop]=await Promise.all([
