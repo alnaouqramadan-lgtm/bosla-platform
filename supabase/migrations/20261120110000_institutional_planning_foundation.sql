@@ -63,7 +63,7 @@ create table if not exists public.planning_operational_activities (
  constraint planning_operational_activities_plan_fkey foreign key(plan_id,organization_id)
    references public.planning_strategic_plans(id,organization_id) on delete cascade,
  constraint planning_operational_activities_goal_fkey foreign key(goal_id,plan_id,organization_id)
-   references public.planning_strategic_goals(id,plan_id,organization_id) on delete cascade,
+   references public.planning_strategic_goals(id,plan_id,organization_id) on delete restrict,
  constraint planning_operational_activities_dates check(planned_start is null or planned_end is null or planned_end>=planned_start)
 );
 create index if not exists planning_operational_activities_plan_goal_idx on public.planning_operational_activities(plan_id,goal_id);
