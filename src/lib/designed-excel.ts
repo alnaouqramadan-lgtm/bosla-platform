@@ -31,7 +31,7 @@ function base(book:Workbook,name:string,workshop:Workshop,title:string,sub:strin
   columnWidths:number[]):Worksheet {
   const tab=book.addWorksheet(name,{views:[{state:"frozen",ySplit:7,rightToLeft:true}]});
   tab.pageSetup={paperSize:9,orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0};
-  tab.pageMargins={left:.24,right:.24,top:.35,bottom:.35,header:.12,footer:.12};
+  tab.pageSetup.margins={left:.24,right:.24,top:.35,bottom:.35,header:.12,footer:.12};
   tab.properties.defaultRowHeight=26;
   columnWidths.forEach((width,i)=>tab.getColumn(i+1).width=width);
   const last=columnWidths.length;
