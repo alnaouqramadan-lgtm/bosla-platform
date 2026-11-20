@@ -153,7 +153,10 @@ export default function InstitutionalPlan(){
  if(!plan)return <main className="wrap"><Link href="/plans">← الخطط المؤسسية</Link>
   <p role="alert" className="card error">{error||"الخطة غير موجودة أو لا تملك صلاحية عرضها."}</p></main>;
  const goalName=(goalId:string)=>goals.find(g=>g.id===goalId)?.title??"هدف غير متاح";
- const totalBudget=activities.reduce((sum,a)=>sum+(a.estimated_budget??0),0);
+ const budgets=activities.reduce<Record<string,number>>((acc,a)=>{
+  if(a.estimated_budget!=null)acc[a.currency_code]=(acc[a.currency_code]??0)+a.estimated_budget;
+  return acc;
+ },{});
  return <main className="wrap institutional-app" dir="rtl">
   <header className="institutional-hero">
    <div><Link href="/plans" className="institutional-back">← جميع الخطط</Link>
@@ -166,9 +169,9 @@ export default function InstitutionalPlan(){
    <div><strong>{goals.length}</strong><small>أهداف استراتيجية</small></div>
    <div><strong>{activities.length}</strong><small>أنشطة تشغيلية</small></div>
    <div><strong>{indicators.length}</strong><small>مؤشرات أداء</small></div>
-   <div><strong>{n(totalBudget)}</strong><small>مجموع الميزانيات المسجلة (بوحدات العملات المختلطة)</small></div>
+   <div><strong>{Object.keys(budgets).length}</strong><small>عملات موازنة مسجلة</small></div>
   </div>
-  <p className="muted">التكاليف معروضة بحسب عملة كل نشاط؛ لا تُعتمد قيمة إجمالية للموازنة قبل توحيد العملات وأسعار الصرف.</p>
+  <p className="muted">ملخص الموازنات حسب العملة: {Object.entries(budgets).map(([currency,amount])=>`${n(amount)} ${currency}`).join(" • ")||"لا توجد موازنات بعد"}. لا تجمع بوصلة عملات مختلفة في إجمالي واحد.</p>
   {error&&<p role="alert" className="card error">{error}</p>}
   {notice&&<p role="status" className="card good">{notice}</p>}
   <nav className="institutional-tabs" aria-label="أقسام الخطة">
