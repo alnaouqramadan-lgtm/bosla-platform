@@ -2,6 +2,7 @@ import {reviewSource,type FormReview} from "@/lib/form-review";
 import type {Answer, Group,Participant,Priority,Vote,Workshop} from "@/lib/types";
 import {STAGES,fieldName,normalizeLine} from "@/lib/stages";
 import {worksheetGroups,worksheetLines,worksheetPairs,worksheetValue} from "@/lib/worksheet-model";
+import {executionRows,performanceRows,goalsForGroup,followupForGroup,impactForGroup,worksheetDataNote} from "@/lib/worksheet-details";
 
 export type GroupedLine={stage:number;field_key:string;text:string;who:string[]};
 export function groupRepeated(answers:Answer[], groups:Group[], participants:Participant[]):GroupedLine[]{
@@ -151,6 +152,105 @@ export async function exportWorkbook(
    }
    s.heading("A21:L21","الأهداف الأكثر أولوية (خلاصة المجموعة)",s.violet);
    for(let i=0;i<3;i++)s.notes(i+22,(i+1)+". "+(goals[i]??""));
+  }
+
+  // Worksheet 4: execution plan with intentionally blank goal links/quantities.
+  {
+   const s=make(4,"كيف سنحقق أهدافنا؟");
+   s.heading("A6:L6","الخطة التنفيذية المقترحة لعام "+g.planningYear);
+   const heads:[string,string][]=[
+    ["A7:A7","رقم"],["B7:D7","المشروع / النشاط"],["E7:F7","الهدف المرتبط (من ورقة 3)"],
+    ["G7:G7","الفئة المستهدفة"],["H7:H7","الكمية المستهدفة"],["I7:I7","فترة التنفيذ"],
+    ["J7:J7","المسؤول"],["K7:L7","التكلفة التقديرية"]
+   ];
+   heads.forEach(([range,title])=>s.heading(range,title));
+   s.tab.getRow(7).height=50;
+   const rows=executionRows(g),goalName="BOSLA_Goals_Group_"+g.number;
+   const goals=goalsForGroup(g);
+   if(goals.length){
+    const goalsTab=book.addWorksheet("أهداف المجموعة "+g.number,{
+      views:[{rightToLeft:true,showGridLines:false}]
+    });
+    goalsTab.getColumn(1).width=90;
+    goalsTab.getCell("A1").value="الأهداف المقترحة من ورقة العمل (3) — المجموعة "+g.number;
+    goals.forEach((goal,i)=>{goalsTab.getCell("A"+(i+2)).value=safe(goal);});
+    book.definedNames.add("'أهداف المجموعة "+g.number+"'!$A$2:$A$"+(goals.length+1),goalName);
+   }
+   rows.forEach((row,i)=>{
+    const r=i+8;
+    s.data("A"+r+":A"+r,row.number);
+    s.data("B"+r+":D"+r,row.activity);
+    s.data("E"+r+":F"+r,row.goal);
+    s.data("G"+r+":G"+r,row.audience);
+    s.data("H"+r+":H"+r,row.quantity);
+    s.data("I"+r+":I"+r,row.period);
+    s.data("J"+r+":J"+r,row.manager);
+    s.data("K"+r+":L"+r,row.cost);
+    s.tab.getRow(r).height=45;
+    if(goals.length){
+     s.tab.getCell("E"+r).dataValidation={type:"list",allowBlank:true,
+      formulae:[goalName],showErrorMessage:true,error:"اختر هدفًا من أهداف المجموعة (ورقة 3)."};
+    }
+   });
+   const header=rows.length+10;
+   s.heading("A"+header+":D"+header,"متطلبات النجاح",s.violet);
+   s.heading("E"+header+":H"+header,"المخاطر المحتملة",s.gold);
+   s.heading("I"+header+":L"+header,"مؤشرات التنفيذ والمتابعة",s.green);
+   for(let i=1;i<=5;i++){
+    const r=header+i;
+    s.data("A"+r+":D"+r,"");
+    s.data("E"+r+":H"+r,"");
+    s.data("I"+r+":L"+r,"");
+   }
+   s.heading("A"+(header+7)+":L"+(header+7),"أهم 3 أنشطة ذات أولوية (توصية المجموعة)",s.violet);
+   s.notes(header+8,"1. ........................  2. ........................  3. ........................");
+   s.notes(header+10,worksheetDataNote,s.gold);
+   s.tab.getRow(header+10).height=50;
+   s.tab.pageSetup.printArea="A1:L"+(header+10);
+  }
+  // Worksheet 5: KPI measurement with no invented baseline/targets/frequency.
+  {
+   const s=make(5,"كيف نعرف أننا نجحنا؟");
+   s.heading("A6:L6","مؤشرات النجاح لأهدافنا لعام "+g.planningYear);
+   const heads:[string,string][]=[
+    ["A7:A7","رقم"],["B7:D7","الهدف (من ورقة 3)"],["E7:G7","مؤشر الأداء"],
+    ["H7:H7","خط الأساس"],["I7:I7","المستهدف "+g.planningYear],
+    ["J7:K7","مصدر التحقق"],["L7:L7","دورية القياس"]
+   ];
+   heads.forEach(([range,title])=>s.heading(range,title));
+   s.tab.getRow(7).height=50;
+   const rows=performanceRows(g),goals=goalsForGroup(g),goalName="BOSLA_Goals_Group_"+g.number;
+   rows.forEach((row,i)=>{
+    const r=i+8;
+    s.data("A"+r+":A"+r,row.number);
+    s.data("B"+r+":D"+r,row.goal);
+    s.data("E"+r+":G"+r,row.kpi);
+    s.data("H"+r+":H"+r,row.baseline);
+    s.data("I"+r+":I"+r,row.target);
+    s.data("J"+r+":K"+r,row.verification);
+    s.data("L"+r+":L"+r,row.frequency);
+    s.tab.getRow(r).height=45;
+    if(goals.length){
+     s.tab.getCell("B"+r).dataValidation={type:"list",allowBlank:true,
+      formulae:[goalName],showErrorMessage:true,error:"اختر هدفًا من أهداف المجموعة (ورقة 3)."};
+    }
+   });
+   const header=rows.length+10;
+   s.heading("A"+header+":D"+header,"آلية المتابعة والتقييم",s.violet);
+   s.heading("E"+header+":H"+header,"معايير الحكم على النجاح",s.gold);
+   s.heading("I"+header+":L"+header,"النتائج المتوقعة والأثر",s.green);
+   const followup=followupForGroup(g),impacts=impactForGroup(g);
+   for(let i=0;i<5;i++){
+    const r=header+i+1;
+    s.data("A"+r+":D"+r,followup[i]??"");
+    s.data("E"+r+":H"+r,"");
+    s.data("I"+r+":L"+r,impacts[i]??"");
+   }
+   s.heading("A"+(header+7)+":L"+(header+7),"أهم 3 مؤشرات رئيسية للمتابعة المؤسسية",s.violet);
+   s.notes(header+8,"1. ........................  2. ........................  3. ........................");
+   s.notes(header+10,worksheetDataNote,s.gold);
+   s.tab.getRow(header+10).height=50;
+   s.tab.pageSetup.printArea="A1:L"+(header+10);
   }
  }
 
