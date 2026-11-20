@@ -36,7 +36,7 @@ textarea { resize:vertical; }
  .bosla-worksheet-print { display:block!important; font-family:Tahoma,Arial,sans-serif; color:#092044; direction:rtl; }
  .bosla-ws-page { box-sizing:border-box; padding:2mm; width:100%; min-height:187mm;
    break-after:page; page-break-after:always; break-inside:avoid; page-break-inside:avoid; font-size:10pt; }
- .bosla-ws-page:last-child { break-after:auto; page-break-after:auto; }
+ .bosla-worksheet-print > div:last-child .bosla-ws-page:last-child { break-after:auto; page-break-after:auto; }
  .bosla-ws-header { display:grid; grid-template-columns:27% 48% 25%; align-items:start; gap:2mm; min-height:17mm; }
  .bosla-ws-brand { border-bottom:2px solid #067bb5; background:#eff8ff; border-radius:8px;
    padding:2mm 3mm; text-align:center; color:#09234a; display:flex; flex-direction:column; gap:1mm; }
