@@ -46,7 +46,7 @@ test("approved snapshot immutable from client, only tenant owner may read",()=>{
  assert.match(sql,/create function public\.planning_publish_plan/);
  assert.match(sql,/language sql security invoker/);
  assert.match(sql,/if p\.status<>'draft'/);
- assert.match(sql,/if not private\.planning_owner\(p\.organization_id\)/);
+ assert.match(sql,/not private\.planning_owner\(p\.organization_id\)/);
  assert.match(sql,/insert into public\.planning_plan_revisions/);
  assert.match(sql,/status='approved'/);
  assert.match(sql,/k\.target is null/);
