@@ -7,9 +7,9 @@ import {deliveryOverview,latestById,type ActivityReport,type KpiMeasurement,type
 const err=(value:unknown)=>value instanceof Error?value.message:String(value);
 const fmt=(value:number|null|undefined)=>value==null?"—":new Intl.NumberFormat("ar",{maximumFractionDigits:2}).format(value);
 const today=()=>new Date().toLocaleDateString("en-CA");
-type Props={plan:StrategicPlan;activities:OperationalActivity[];indicators:PerformanceIndicator[];onReload:()=>Promise<void>};
+type Props={plan:StrategicPlan;activities:OperationalActivity[];indicators:PerformanceIndicator[];onReload:()=>Promise<void>;canManage:boolean};
 
-export default function PlanGovernance({plan,activities,indicators,onReload}:Props){
+export default function PlanGovernance({plan,activities,indicators,onReload,canManage}:Props){
  const [revision,setRevision]=useState<PlanRevision|null>(null);
  const [activityReports,setActivityReports]=useState<ActivityReport[]>([]);
  const [kpiMeasurements,setKpiMeasurements]=useState<KpiMeasurement[]>([]);
@@ -59,7 +59,7 @@ export default function PlanGovernance({plan,activities,indicators,onReload}:Pro
  const counts=useMemo(()=>deliveryOverview(activities,activityReports,today()),[activities,activityReports]);
 
  async function publish(){
-  if(busy||plan.status!=="draft")return;
+  if(busy||!canManage||plan.status!=="draft")return;
   if(!window.confirm("سيعتمد مالك المؤسسة الخطة ويُنشئ نسخة مرجعية ثابتة. لن تتمكن من تعديل هذه النسخة بعد الاعتماد. هل أنت متأكد؟"))return;
   setBusy(true);setError("");setNotice("");
   try{
@@ -69,7 +69,7 @@ export default function PlanGovernance({plan,activities,indicators,onReload}:Pro
   }catch(e){setError(err(e));}finally{setBusy(false);}
  }
  async function saveReport(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();if(busy||plan.status!=="approved")return;
+  event.preventDefault();if(busy||!canManage||plan.status!=="approved")return;
   setBusy(true);setError("");setNotice("");
   try{
    const progress=Number(percent),actual=quantity.trim()===""?null:Number(quantity),
@@ -91,7 +91,7 @@ export default function PlanGovernance({plan,activities,indicators,onReload}:Pro
   }catch(e){setError(err(e));}finally{setBusy(false);}
  }
  async function saveMeasurement(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();if(busy||plan.status!=="approved")return;
+  event.preventDefault();if(busy||!canManage||plan.status!=="approved")return;
   setBusy(true);setError("");setNotice("");
   try{
    const actual=Number(value);
@@ -115,8 +115,8 @@ export default function PlanGovernance({plan,activities,indicators,onReload}:Pro
    <p>مرحلة إعداد الخطة: يراجع مالك المؤسسة الرؤية والرسالة والأهداف والأنشطة والمؤشرات قبل اعتماد خط أساس رسمي.</p>
    <p className="muted">للاعتماد يلزم هدف واحد، ونشاط تشغيلي واحد، ومؤشر أداء واحد على الأقل، مع مستهدف ومصدر تحقق لكل مؤشر، ورؤية ورسالة مكتوبتين.</p>
    <p className="muted">الاعتماد الحالي ينفذه <strong>مالك المؤسسة</strong> بصفته المسؤول الإداري في النسخة الأولية. ليس اعتمادًا من مجلس الإدارة أو لجنة مستقلة؛ سنضيف مستويات الاعتماد والصلاحيات في مرحلة لاحقة.</p>
-   <button className="primary" type="button" disabled={busy||!activities.length||!indicators.length}
-    onClick={()=>void publish()}>{busy?"جارٍ الاعتماد…":"اعتماد الخطة ونشر النسخة المرجعية"}</button>
+   {canManage&&<button className="primary" type="button" disabled={busy||!activities.length||!indicators.length}
+    onClick={()=>void publish()}>{busy?"جارٍ الاعتماد…":"اعتماد الخطة ونشر النسخة المرجعية"}</button>}
    </div>:<>
    <p className="good">الخطة معتمدة بواسطة مالك المؤسسة. حقول الخطة الأساسية مُقفلة، ويُسمح بتسجيل تحديثات الإنجاز.</p>
    {loading&&<p role="status" className="muted">جارٍ تحميل بيانات المتابعة…</p>}
@@ -128,7 +128,8 @@ export default function PlanGovernance({plan,activities,indicators,onReload}:Pro
     <div><strong>{counts.overdue}</strong><small>أنشطة تجاوزت موعدها ولم تكتمل</small></div>
    </div>
    <p className="muted">العدد المكتمل لا يمثل نسبة تحقيق الأهداف الاستراتيجية أو مؤشرات الأثر. أي قيمة فعلية هنا مصدرها تقرير مسجل فقط، دون افتراض أن النشاط المنفذ يساوي هدفًا متحققًا.</p>
-   <div className="institutional-followup-grid">
+   {!canManage&&<p className="muted">صلاحية حسابك: مشاهدة الخطة المعتمدة ونتائج المتابعة فقط. لا يمكنك اعتماد الخطة أو تسجيل إنجازات جديدة.</p>}
+   {canManage&&<div className="institutional-followup-grid">
     <div className="institutional-followup-panel">
      <h3>تحديث تنفيذ نشاط</h3>
      <form className="stack" onSubmit={saveReport}>
@@ -160,7 +161,7 @@ export default function PlanGovernance({plan,activities,indicators,onReload}:Pro
       <button className="primary" disabled={busy||!indicatorId}>تسجيل قياس المؤشر</button>
      </form>
     </div>
-   </div>
+   </div>}
    <h3>حالة تنفيذ الأنشطة</h3>
    <div className="institutional-records">{activities.map(a=>{
     const current=latestReports.get(a.id);
