@@ -25,14 +25,14 @@ function safe(value:string|number|undefined|null):string|number{
 }
 export async function exportWorkbook(
  workshop:Workshop,answers:Answer[],groups:Group[],participants:Participant[],priorities:Priority[],votes:Vote[],
- decisions:{stage:number;content:string;decided_by:string}[]=[],reviews:FormReview[]=[]
+ decisions:{stage:number;content:string;decided_by:string}[]=[],reviews:FormReview[]=[],organizationName=""
 ){
  const {default: ExcelJS}=await import("exceljs");
  const book=new ExcelJS.Workbook();book.creator="BOSLA AI";
 
  // Styled, editable worksheet facsimiles appear before the audit/data sheets.
  // The designs are a layout layer; all original answers remain intact below.
- for(const g of worksheetGroups(workshop,answers,groups,participants)){
+ for(const g of worksheetGroups(workshop,answers,groups,participants,organizationName)){
   const navy="FF073668",blue="FF095D91",pale="FFE7F2FC",green="FFE4F4E9";
   const violet="FFF2E9FB",gold="FFFFF2D5",red="FFF9E6EB";
   const border={style:"thin" as const,color:{argb:"FFB4C5D8"}};
