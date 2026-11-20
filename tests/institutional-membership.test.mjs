@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 
-const sql=readFileSync(new URL("../supabase/migrations/20261120194500_bosla_institutional_readonly_members_v1.sql",import.meta.url),"utf8");
+const sql=readFileSync(new URL("../supabase/migrations/20261120181211_bosla_institutional_readonly_members_v1.sql",import.meta.url),"utf8");
 const members=readFileSync(new URL("../src/app/organizations/[id]/members/page.tsx",import.meta.url),"utf8");
 const plans=readFileSync(new URL("../src/app/plans/page.tsx",import.meta.url),"utf8");
 const detail=readFileSync(new URL("../src/app/plans/[id]/page.tsx",import.meta.url),"utf8");
