@@ -10,6 +10,11 @@ import type {Workshop,Group,Participant,Answer,Priority,Vote} from "@/lib/types"
 function err(e:unknown):string {return e instanceof Error?e.message:String(e&&typeof e==="object"&&"message" in e?(e as {message:unknown}).message:e);}
 function draftKey(stage:number,field:string,scope:string,owner:string){return [stage,field,scope,owner].join("|");}
 
+function roleLabel(facilitator:boolean,recorder:boolean){
+ if(facilitator)return recorder?"ميسّر الورشة ومقرّر المجموعة":"ميسّر الورشة";
+ return recorder?"مقرّر المجموعة":"مشارك";
+}
+
 export default function WorkshopPage(){
  const {id}=useParams<{id:string}>();const router=useRouter();
  const[userId,setUserId]=useState("");const[workshop,setWorkshop]=useState<Workshop|null>(null);
@@ -207,7 +212,7 @@ export default function WorkshopPage(){
  const grouped=facilitator?groupRepeated(answers,groups,participants):[];
  return <main className="wrap">
  <header className="toolbar no-print" style={{justifyContent:"space-between"}}>
- <Link href="/dashboard">العودة للورش</Link><span>{facilitator?"صلاحيات ميسر":"مشارك"}</span>
+ <Link href="/dashboard">العودة للورش</Link><span>{roleLabel(facilitator,!!me?.is_recorder)}</span>
  </header>
  <h1 className="title">{workshop.title}</h1>
  <p className="muted">السنة: {workshop.planning_year} — التاريخ: {workshop.workshop_date}</p>
@@ -246,14 +251,14 @@ export default function WorkshopPage(){
  {!platformAdmin&&<p className="muted">مدير بوصلة وحده يضيف المشاركين. يمكن للميسر توزيع المشاركين المسجلين على المجموعات.</p>}
  {!participants.length&&<p>لم تتم إضافة مشاركين بعد.</p>}
  <div className="stack">{participants.map(p=><div key={p.id} className="toolbar" style={{borderBottom:"1px solid #e2e8f0",paddingBottom:10}}>
- <strong style={{minWidth:145}}>{p.display_name}</strong>
+ <div style={{minWidth:145}}><strong>{p.display_name}</strong><div className="muted">{roleLabel(p.user_id===workshop.created_by||p.workshop_role==="facilitator",p.is_recorder)}</div></div>
  <select aria-label="مجموعة المشارك" className="field" style={{width:"auto"}} disabled={busy}
   value={p.group_id||""} onChange={e=>void setParticipant(p,{group_id:e.target.value||null,is_recorder:false})}>
  <option value="">غير موزّع</option>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select>
  <label className="chip"><input type="checkbox" checked={p.is_recorder} disabled={!p.group_id||busy}
-  onChange={e=>void setParticipant(p,{is_recorder:e.target.checked})}/> مقرر</label>
+  onChange={e=>void setParticipant(p,{is_recorder:e.target.checked})}/> تعيين مقرّر للمجموعة</label>
  <label className="chip"><input type="checkbox" checked={p.workshop_role==="facilitator"} disabled={busy}
-  onChange={e=>void setParticipant(p,{workshop_role:e.target.checked?"facilitator":"participant"})}/> ميسر</label>
+  onChange={e=>void setParticipant(p,{workshop_role:e.target.checked?"facilitator":"participant"})}/> تعيين ميسّر للورشة</label>
  </div>)}</div>
  <h3>متابعة التقدم</h3>
  <div className="two-cols">{groups.map(g=>{
