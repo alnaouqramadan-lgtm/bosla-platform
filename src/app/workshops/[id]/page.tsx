@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import FormReviewPanel from "@/components/FormReviewPanel";
+import WorksheetPrint from "@/components/WorksheetPrint";
 import {reviewSource,type FormReview} from "@/lib/form-review";
 import Link from "next/link";
 import {useParams,useRouter} from "next/navigation";
@@ -22,6 +23,7 @@ function roleLabel(facilitator:boolean,recorder:boolean,inGroup:boolean){
 export default function WorkshopPage(){
  const {id}=useParams<{id:string}>();const router=useRouter();
  const[userId,setUserId]=useState("");const[workshop,setWorkshop]=useState<Workshop|null>(null);
+ const[organizationName,setOrganizationName]=useState("");
  const[groups,setGroups]=useState<Group[]>([]);const[participants,setParticipants]=useState<Participant[]>([]);
  const[answers,setAnswers]=useState<Answer[]>([]);const[priorities,setPriorities]=useState<Priority[]>([]);const[votes,setVotes]=useState<Vote[]>([]);
  const[drafts,setDrafts]=useState<Record<string,string>>({});const[saveStatus,setSaveStatus]=useState<Record<string,string>>({});
@@ -64,6 +66,9 @@ export default function WorkshopPage(){
   if(w.error)throw w.error;
   if(!w.data){setWorkshop(null);return;}
   setWorkshop(w.data as Workshop);
+  const orgResult=await supabase.from("planning_organizations").select("name")
+   .eq("id",w.data.organization_id).maybeSingle();
+  setOrganizationName(orgResult.data?.name??w.data.title);
   setLoadStep("تحميل المجموعات وإجابات الورشة");
   const queries=await Promise.all([
    supabase.from("planning_groups").select("id,organization_id,workshop_id,name").eq("workshop_id",id).order("name"),
@@ -203,8 +208,8 @@ export default function WorkshopPage(){
    if(result.error)throw result.error;await refreshVotes();
   }catch(e){setError(err(e));}finally{setBusy(false);}}
  async function excel(){if(!workshop||!facilitator||busy)return;setBusy(true);setError("");
-  try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes,decisions,reviews);
-   setNotice("تم تحضير ملف Excel بأوراق منفصلة لكل مخرجات الورشة.");
+  try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes,decisions,reviews,organizationName);
+   setNotice("تم تحضير Excel بالأوراق المصممة (1–3) لكل مجموعة، مع ملحق البيانات الأصلية.");
   }catch(e){setError(err(e));}finally{setBusy(false);}}
 
  if(loading)return <main className="wrap"><section className="card">
@@ -303,7 +308,9 @@ export default function WorkshopPage(){
   const key=draftKey(stage,f.key,scope,ownerId);
   const value=drafts[key]??answers.find(a=>a.stage===stage&&a.field_key===f.key&&a.scope===scope&&a.owner_id===ownerId)?.content??"";
   return <label key={f.key}><strong style={{display:"block",marginBottom:7}}>{f.title}</strong>
-  <textarea className="field" rows={3} disabled={!editable} maxLength={30000} placeholder=""
+  <textarea className="field" rows={3} disabled={!editable} maxLength={30000}
+   placeholder={stage===1&&f.key==="teams"?"مثال: فريق البرامج | 6 (فريق في كل سطر)":
+    stage===3&&f.key==="goal_priorities"?"اكتب أولوية كل هدف في سطر: مرتفع، متوسط، منخفض":""}
    value={value} onChange={e=>edit(f.key,e.target.value)} onBlur={()=>flush(f.key)}/>
   <small className={saveStatus[key]?.startsWith("فشل")?"error":"muted"} role="status">{saveStatus[key]||""}</small>
   </label>;
@@ -327,10 +334,11 @@ export default function WorkshopPage(){
  })}
  <p className="muted">التصويت {workshop.vote_open?"مفتوح":"مغلق"} حاليًا</p>
  </section>}
- {showResults&&facilitator&&<section className="card">
+ {showResults&&facilitator&&<section className="card worksheet-print-host">
  <h2>المخرجات النهائية للورشة</h2>
  <div className="toolbar no-print"><button className="primary" disabled={busy} onClick={()=>void excel()}>تصدير Excel</button>
- <button className="secondary" onClick={()=>window.print()}>طباعة التقرير</button></div>
+ <button className="secondary" onClick={()=>window.print()}>حفظ PDF / طباعة النماذج</button></div>
+ <WorksheetPrint workshop={workshop} answers={answers} groups={groups} participants={participants} organizationName={organizationName}/>
  <h3>النماذج المعتمدة</h3>
  {!reviews.some(r=>r.finalized_at)&&<p>لم يُعتمد نموذج كامل بعد.</p>}
  {reviews.filter(r=>r.finalized_at).map(r=><section key={r.stage}><h3>{STAGES[r.stage-1].name}</h3>
