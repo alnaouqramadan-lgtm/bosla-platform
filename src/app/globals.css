@@ -21,3 +21,64 @@ a { color:#155a9b; }
 .title { margin: 10px 0 20px; font-size:clamp(22px,4vw,34px); }
 textarea { resize:vertical; }
 @media print { .no-print {display:none!important;} .card { box-shadow:none; break-inside:avoid; } body { background:#fff;} .wrap {max-width:none;} }
+
+
+/* BOSLA printable worksheets – reserved for browser print / Save as PDF. */
+.bosla-worksheet-print { display:none; }
+@media print {
+ @page { size:A4 landscape; margin:8mm; }
+ html,body { direction:rtl; background:#fff!important; color:#09183d!important; }
+ body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+ .wrap { max-width:none!important; padding:0!important; margin:0!important; }
+ .wrap > :not(.worksheet-print-host) { display:none!important; }
+ .worksheet-print-host { display:block!important; margin:0!important; padding:0!important; border:0!important; box-shadow:none!important; }
+ .worksheet-print-host > :not(.bosla-worksheet-print) { display:none!important; }
+ .bosla-worksheet-print { display:block!important; font-family:Tahoma,Arial,sans-serif; color:#092044; direction:rtl; }
+ .bosla-ws-page { box-sizing:border-box; padding:2mm; width:100%; min-height:187mm;
+   break-after:page; page-break-after:always; break-inside:avoid; page-break-inside:avoid; font-size:10pt; }
+ .bosla-ws-page:last-child { break-after:auto; page-break-after:auto; }
+ .bosla-ws-header { display:grid; grid-template-columns:27% 48% 25%; align-items:start; gap:2mm; min-height:17mm; }
+ .bosla-ws-brand { border-bottom:2px solid #067bb5; background:#eff8ff; border-radius:8px;
+   padding:2mm 3mm; text-align:center; color:#09234a; display:flex; flex-direction:column; gap:1mm; }
+ .bosla-ws-brand strong { font-size:13pt; }
+ .bosla-ws-brand small { font-size:8pt; font-weight:700; }
+ .bosla-ws-hero { background:#065782; color:#fff; border-radius:8px; text-align:center; padding:2mm 1mm; font-size:19pt; }
+ .bosla-ws-number { background:#073668; color:#fff; text-align:center; border-radius:8px; font-size:15pt; font-weight:700; padding:3mm 1mm; }
+ .bosla-ws-subtitle { font-size:12pt; text-align:center; margin:0 0 3mm; color:#132a52; }
+ .bosla-ws-members { display:flex; justify-content:space-between; align-items:center; gap:2mm; min-height:13mm;
+   border:1px solid #1479aa; border-radius:8px; padding:1.8mm 4mm; margin-bottom:3mm; }
+ .bosla-ws-members > span { display:flex; flex-wrap:wrap; gap:5mm; align-items:center; }
+ .bosla-ws-grid { display:grid; gap:3mm; }
+ .bosla-ws-grid-three { grid-template-columns:repeat(3,minmax(0,1fr)); }
+ .bosla-ws-grid-two { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .bosla-ws-box { border:1px solid #2686b5; border-radius:9px; overflow:hidden; min-width:0; background:#fff; }
+ .bosla-ws-box h4 { background:#d9eefa; margin:0; padding:2mm 3mm;
+   text-align:center; font-size:12pt; min-height:10mm; }
+ .bosla-ws-inner { padding:1mm 2mm 2mm; }
+ .bosla-ws-green { border-color:#529c70; } .bosla-ws-green h4 { background:#e0f3e6; }
+ .bosla-ws-gold { border-color:#c19a18; } .bosla-ws-gold h4 { background:#fff3d3; }
+ .bosla-ws-purple { border-color:#9074c4; } .bosla-ws-purple h4 { background:#eeeafa; }
+ .bosla-ws-red { border-color:#b77b8d; } .bosla-ws-red h4 { background:#f8e4e9; }
+ .bosla-ws-grid-three .bosla-ws-box { min-height:56mm; }
+ .bosla-ws-grid-two .bosla-ws-box { min-height:61mm; }
+ .bosla-ws-table { width:100%; border-collapse:collapse; table-layout:fixed; text-align:right; }
+ .bosla-ws-table th { background:#e7f2fc; border:1px solid #a8bfd5; padding:1.4mm; font-size:9pt; }
+ .bosla-ws-table td { border:1px solid #acc3d6; height:8mm; padding:1mm 1.6mm;
+  vertical-align:top; overflow-wrap:anywhere; }
+ .bosla-ws-lines { display:grid; gap:1.2mm; }
+ .bosla-ws-line { display:flex; flex-direction:row; align-items:center; gap:1.5mm;
+   min-height:7.4mm; border-bottom:1px dotted #9eabbc; }
+ .bosla-ws-line > span:last-child { flex:1; overflow-wrap:anywhere; }
+ .bosla-ws-check { font-size:15pt; line-height:1; }
+ .bosla-ws-help { text-align:center; margin:1mm 0; font-size:8pt; }
+ .bosla-ws-summary { display:flex; align-items:center; gap:4mm; background:#f3eafd;
+  border:1px solid #a17ac3; border-radius:8px; padding:2mm 4mm; margin-top:3mm; min-height:13mm; }
+ .bosla-ws-summary strong { white-space:nowrap; color:#682b82; }
+ .bosla-ws-summary > span { overflow-wrap:anywhere; }
+ .bosla-ws-goals-grid { display:grid; grid-template-columns:72% 27%; gap:1%; }
+ .bosla-ws-goals-grid .bosla-ws-box { min-height:76mm; }
+ .bosla-ws-goals-grid .bosla-ws-table td { height:11mm; }
+ .bosla-ws-goals-grid .bosla-ws-table td:nth-child(1) { width:8%; text-align:center; }
+ .bosla-ws-goals-bottom { margin-top:3mm; }
+ .bosla-ws-goals-bottom .bosla-ws-box { min-height:63mm; }
+}
