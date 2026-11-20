@@ -7,6 +7,7 @@ const sql=readFileSync(new URL("../supabase/migrations/20261120133949_bosla_plan
 const plan=readFileSync(new URL("../src/app/plans/[id]/page.tsx",import.meta.url),"utf8");
 const index=readFileSync(new URL("../src/app/plans/page.tsx",import.meta.url),"utf8");
 const view=readFileSync(new URL("../src/components/PlanGovernance.tsx",import.meta.url),"utf8");
+const team=readFileSync(new URL("../src/components/PlanTeamReview.tsx",import.meta.url),"utf8");
 const src=pathToFileURL(fileURLToPath(new URL("../src/lib/progress-metrics.ts",import.meta.url))).href;
 function run(code){
  return execFileSync(process.execPath,["--experimental-strip-types","--input-type=module","-e",
@@ -69,11 +70,11 @@ test("progress and KPI evidence is append-only and locked to approved same-tenan
  assert.match(sql,/check \(delivery_status<>'completed' or progress_percent=100\)/);
 });
 test("published plan editor is read-only and exposes monitoring",()=>{
- assert.match(plan,/plan\.status==="draft"&&<form/);
- assert.match(plan,/plan\.status==="draft"\?<form/);
+ assert.match(plan,/canEdit&&<form/);
+ assert.match(plan,/canEdit\?<form/);
  assert.match(plan,/active==="governance"&&<PlanGovernance/);
- assert.match(plan,/plan\.status!=="draft"/);
- assert.match(view,/planning_publish_plan/);
+ assert.match(plan,/const canEdit=plan\?\.status==="draft"/);
+ assert.match(team,/planning_publish_plan/);
  assert.match(view,/planning_activity_progress/);
  assert.match(view,/planning_kpi_measurements/);
  assert.match(view,/آخر تقدم مسجل/);
