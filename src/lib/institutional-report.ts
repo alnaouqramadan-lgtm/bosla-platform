@@ -6,7 +6,7 @@ import type {ActivityReport,KpiMeasurement} from "./progress-metrics";
  * Reports entered later with an earlier event date are included and labelled accordingly.
  */
 export type ReportPeriod="month"|"quarter"|"year";
-export type DeliveryFlag="scheduled"|"completed"|"blocked"|"overdue"|"in_progress"|"unreported";
+export type DeliveryFlag="future_period"|"scheduled"|"completed"|"blocked"|"overdue"|"in_progress"|"unreported";
 export type Attainment="met"|"not_met"|"unmeasured"|"unknown_direction";
 export type ReportWindow={start:string;end:string;label:string};
 export type ActivityLine={
@@ -89,7 +89,8 @@ export function buildPeriodicReport(input:{
   const current=hasStarted?reports.get(a.id):undefined;
   const progress=finite(current?.progress_percent);
   let flag:DeliveryFlag;
-  if(!hasStarted||(a.planned_start!=null&&a.planned_start>asOf))flag="scheduled";
+  if(!hasStarted)flag="future_period";
+  else if(a.planned_start!=null&&a.planned_start>asOf)flag="scheduled";
   else if(current?.delivery_status==="completed"&&progress===100)flag="completed";
   else if(current?.delivery_status==="blocked")flag="blocked";
   else if(a.planned_end!=null&&a.planned_end<asOf)flag="overdue";
@@ -135,10 +136,10 @@ export function buildPeriodicReport(input:{
   totals:{
    activities:activityLines.length,
    completed:activityLines.filter(a=>a.flag==="completed").length,
-   overdue:activityLines.filter(a=>a.flag==="overdue").length,
+   overdue:activityLines.filter(a=>hasStarted&&a.end!=null&&a.end<asOf&&a.flag!=="completed"&&a.flag!=="scheduled").length,
    blocked:activityLines.filter(a=>a.flag==="blocked").length,
    scheduled:activityLines.filter(a=>a.flag==="scheduled").length,
-   unreported:activityLines.filter(a=>a.flag==="unreported").length,
+   unreported:activityLines.filter(a=>a.reportDate==null&&a.flag!=="scheduled"&&a.flag!=="future_period").length,
    withReports:activityLines.filter(a=>a.reportDate!=null).length,
    periodActivityUpdates:counted.length,periodKpiReadings:measured.length,
    indicators:indicatorLines.length,measured:indicatorLines.filter(k=>k.actual!=null).length,
