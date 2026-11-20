@@ -39,8 +39,8 @@ export default function PlanTeamReview({plan,role,onReload}:Props){
  const isOwner=role==="owner";
  const canReport=role==="owner"||role==="editor";
  const hasReviewer=members.some(m=>m.role==="reviewer");
- async function run(call:()=>Promise<{error:unknown}>,success:string){
-  if(busy)return;
+ async function run(call:()=>PromiseLike<{error:unknown}>,success:string):Promise<boolean>{
+  if(busy)return false;
   setBusy(true);setError("");setNotice("");
   try{
    const result=await call();
@@ -48,14 +48,15 @@ export default function PlanTeamReview({plan,role,onReload}:Props){
    await onReload();
    await load();
    setNotice(success);
-  }catch(e){setError(err(e));}finally{setBusy(false);}
+   return true;
+  }catch(e){setError(err(e));return false;}finally{setBusy(false);}
  }
  function add(e:FormEvent<HTMLFormElement>){
   e.preventDefault();
   if(!isOwner||plan.status!=="draft")return;
   void run(()=>supabase.rpc("planning_assign_plan_member",{
    p_plan:plan.id,p_email:email.trim(),p_role:memberRole
-  }),"أُضيف العضو إلى فريق هذه الخطة فقط.").then(()=>setEmail(""));
+  }),"أُضيف العضو إلى فريق هذه الخطة فقط.").then(ok=>{if(ok)setEmail("");});
  }
  function remove(member:Member){
   if(!isOwner||plan.status!=="draft"||!window.confirm("إلغاء وصول هذا العضو إلى الخطة؟"))return;
