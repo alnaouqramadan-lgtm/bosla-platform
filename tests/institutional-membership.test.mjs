@@ -52,12 +52,12 @@ test("member management is owner-only and cannot send unrequested messages",()=>
  assert.match(plans,/visibleOrgs\.find/);
  assert.match(plans,/معرف حسابي/);
 });
-test("board viewers cannot see mutating controls on approved plan",()=>{
- assert.match(detail,/setCanManage\(access\.data\?\.owner_id===auth\.data\.user\.id\)/);
- assert.match(detail,/!canManage\|\|plan\.status!=="draft"/);
- assert.match(detail,/onReload=\{load\} canManage=\{canManage\}/);
- assert.match(governance,/canManage:boolean/);
- assert.match(governance,/canManage&&<div className="institutional-followup-grid">/);
- assert.match(governance,/canManage&&<button className="primary"/);
- assert.match(governance,/!canManage\|\|plan\.status!=="approved"/);
+test("organization-level board viewers remain read-only; plan roles are scoped",()=>{
+ assert.match(detail,/setAccessRole\(role\)/);
+ assert.match(detail,/const canEdit=plan\?\.status==="draft"/);
+ assert.match(detail,/!canEdit\|\|busy/);
+ assert.match(detail,/role=\{accessRole\}/);
+ assert.match(governance,/role:PlanAccessRole/);
+ assert.match(governance,/role==="owner"\|\|role==="editor"/);
+ assert.match(governance,/role==="viewer"\|\|role==="reviewer"/);
 });

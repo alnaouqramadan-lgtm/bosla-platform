@@ -1,7 +1,7 @@
 export type StrategicPlan={
  id:string;organization_id:string;source_workshop_id:string|null;created_by:string;
  title:string;period_start:string;period_end:string;vision:string;mission:string;
- institutional_values:string;environmental_analysis:string;status:"draft"|"approved";
+ institutional_values:string;environmental_analysis:string;status:"draft"|"in_review"|"reviewed"|"approved";
  revision:number;created_at:string;updated_at:string;
 };
 export type StrategicGoal={

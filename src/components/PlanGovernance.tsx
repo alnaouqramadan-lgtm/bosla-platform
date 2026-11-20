@@ -1,15 +1,16 @@
 "use client";
 import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
 import {supabase} from "@/lib/supabase";
+import PlanTeamReview,{type PlanAccessRole} from "@/components/PlanTeamReview";
 import type {StrategicPlan,OperationalActivity,PerformanceIndicator} from "@/lib/institutional-planning";
 import {deliveryOverview,latestById,type ActivityReport,type KpiMeasurement,type PlanRevision} from "@/lib/progress-metrics";
 
 const err=(value:unknown)=>value instanceof Error?value.message:String(value);
 const fmt=(value:number|null|undefined)=>value==null?"—":new Intl.NumberFormat("ar",{maximumFractionDigits:2}).format(value);
 const today=()=>new Date().toLocaleDateString("en-CA");
-type Props={plan:StrategicPlan;activities:OperationalActivity[];indicators:PerformanceIndicator[];onReload:()=>Promise<void>;canManage:boolean};
+type Props={plan:StrategicPlan;role:PlanAccessRole;activities:OperationalActivity[];indicators:PerformanceIndicator[];onReload:()=>Promise<void>};
 
-export default function PlanGovernance({plan,activities,indicators,onReload,canManage}:Props){
+export default function PlanGovernance({plan,role,activities,indicators,onReload}:Props){
  const [revision,setRevision]=useState<PlanRevision|null>(null);
  const [activityReports,setActivityReports]=useState<ActivityReport[]>([]);
  const [kpiMeasurements,setKpiMeasurements]=useState<KpiMeasurement[]>([]);
@@ -58,18 +59,8 @@ export default function PlanGovernance({plan,activities,indicators,onReload,canM
  const latestKpis=useMemo(()=>latestById(kpiMeasurements,k=>k.indicator_id,k=>k.measured_on),[kpiMeasurements]);
  const counts=useMemo(()=>deliveryOverview(activities,activityReports,today()),[activities,activityReports]);
 
- async function publish(){
-  if(busy||!canManage||plan.status!=="draft")return;
-  if(!window.confirm("سيعتمد مالك المؤسسة الخطة ويُنشئ نسخة مرجعية ثابتة. لن تتمكن من تعديل هذه النسخة بعد الاعتماد. هل أنت متأكد؟"))return;
-  setBusy(true);setError("");setNotice("");
-  try{
-   const result=await supabase.rpc("planning_publish_plan",{p_plan:plan.id});
-   if(result.error)throw result.error;
-   await onReload();setNotice("تم اعتماد الخطة بواسطة مالك المؤسسة وحفظ نسخة مرجعية غير قابلة للتعديل.");
-  }catch(e){setError(err(e));}finally{setBusy(false);}
- }
  async function saveReport(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();if(busy||!canManage||plan.status!=="approved")return;
+  event.preventDefault();if(busy||!(role==="owner"||role==="editor")||plan.status!=="approved")return;
   setBusy(true);setError("");setNotice("");
   try{
    const progress=Number(percent),actual=quantity.trim()===""?null:Number(quantity),
@@ -91,7 +82,7 @@ export default function PlanGovernance({plan,activities,indicators,onReload,canM
   }catch(e){setError(err(e));}finally{setBusy(false);}
  }
  async function saveMeasurement(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();if(busy||!canManage||plan.status!=="approved")return;
+  event.preventDefault();if(busy||plan.status!=="approved")return;
   setBusy(true);setError("");setNotice("");
   try{
    const actual=Number(value);
@@ -108,17 +99,13 @@ export default function PlanGovernance({plan,activities,indicators,onReload,canM
   }catch(e){setError(err(e));}finally{setBusy(false);}
  }
  return <section className="card institutional-card">
-  <h2>اعتماد الخطة ومتابعة الإنجاز</h2>
+  <h2>حوكمة الخطة ومتابعة الإنجاز</h2>
+  <PlanTeamReview plan={plan} role={role} onReload={onReload}/>
   {error&&<p role="alert" className="error">{error}</p>}
   {notice&&<p role="status" className="good">{notice}</p>}
-  {plan.status==="draft"?<div className="stack">
-   <p>مرحلة إعداد الخطة: يراجع مالك المؤسسة الرؤية والرسالة والأهداف والأنشطة والمؤشرات قبل اعتماد خط أساس رسمي.</p>
-   <p className="muted">للاعتماد يلزم هدف واحد، ونشاط تشغيلي واحد، ومؤشر أداء واحد على الأقل، مع مستهدف ومصدر تحقق لكل مؤشر، ورؤية ورسالة مكتوبتين.</p>
-   <p className="muted">الاعتماد الحالي ينفذه <strong>مالك المؤسسة</strong> بصفته المسؤول الإداري في النسخة الأولية. ليس اعتمادًا من مجلس الإدارة أو لجنة مستقلة؛ سنضيف مستويات الاعتماد والصلاحيات في مرحلة لاحقة.</p>
-   {canManage&&<button className="primary" type="button" disabled={busy||!activities.length||!indicators.length}
-    onClick={()=>void publish()}>{busy?"جارٍ الاعتماد…":"اعتماد الخطة ونشر النسخة المرجعية"}</button>}
-   </div>:<>
-   <p className="good">الخطة معتمدة بواسطة مالك المؤسسة. حقول الخطة الأساسية مُقفلة، ويُسمح بتسجيل تحديثات الإنجاز.</p>
+  {plan.status!=="approved"?<p className="muted">لا يبدأ تسجيل الإنجازات والقياسات إلا بعد اعتماد الخطة نهائيًا. تبقى البنود قابلة للتعديل فقط في حالة المسودة وبحسب صلاحيات الفريق.</p>:<>
+   <p className="good">الخطة معتمدة بواسطة مالك المؤسسة. حقولها المرجعية مقفلة، وتتاح تحديثات الإنجاز للمحرر أو المالك.</p>
+   {(role==="viewer"||role==="reviewer")&&<p className="muted">حسابك للعرض فقط؛ يمكنك قراءة النتائج والأدلة دون تغيير الخطة أو تسجيل تحديثات.</p>}
    {loading&&<p role="status" className="muted">جارٍ تحميل بيانات المتابعة…</p>}
    {revision?<p className="muted">النسخة المعتمدة: {revision.version} • تاريخ الاعتماد: {new Date(revision.approved_at).toLocaleString("ar")} • محفوظة كلقطة بيانات ثابتة.</p>:<p className="error">تعذّر العثور على سجل النسخة المعتمدة؛ راجع سجل قاعدة البيانات.</p>}
    <div className="institutional-metrics">
@@ -128,8 +115,7 @@ export default function PlanGovernance({plan,activities,indicators,onReload,canM
     <div><strong>{counts.overdue}</strong><small>أنشطة تجاوزت موعدها ولم تكتمل</small></div>
    </div>
    <p className="muted">العدد المكتمل لا يمثل نسبة تحقيق الأهداف الاستراتيجية أو مؤشرات الأثر. أي قيمة فعلية هنا مصدرها تقرير مسجل فقط، دون افتراض أن النشاط المنفذ يساوي هدفًا متحققًا.</p>
-   {!canManage&&<p className="muted">صلاحية حسابك: مشاهدة الخطة المعتمدة ونتائج المتابعة فقط. لا يمكنك اعتماد الخطة أو تسجيل إنجازات جديدة.</p>}
-   {canManage&&<div className="institutional-followup-grid">
+   {(role==="owner"||role==="editor")&&<div className="institutional-followup-grid">
     <div className="institutional-followup-panel">
      <h3>تحديث تنفيذ نشاط</h3>
      <form className="stack" onSubmit={saveReport}>

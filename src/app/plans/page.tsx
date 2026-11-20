@@ -95,7 +95,7 @@ export default function PlansHome(){
   </section>
   <section className="card institutional-card">
    <h2>الصلاحيات والعضوية</h2>
-   <p className="muted">لإضافة مستخدم مسجّل إلى مؤسسة، اطلب منه مشاركة معرف حسابه مع مالك المؤسسة. جميع أعضاء المؤسسات الجدد يمكنهم قراءة الخطط المعتمدة فقط، دون تعديلها.</p>
+   <p className="muted">لإضافة مستخدم مسجّل إلى مؤسسة، اطلب منه مشاركة معرف حسابه مع مالك المؤسسة. عضو المؤسسة يستطيع قراءة الخطط المعتمدة فقط؛ وقد يعيّنه المالك بصورة مستقلة محررًا أو مراجعًا لخطة محددة.</p>
    <details><summary>معرف حسابي — للمشاركة مع مالك المؤسسة</summary>
     <input className="field" aria-label="معرف حسابي" readOnly dir="ltr" value={currentUserId}/>
    </details>
@@ -107,12 +107,12 @@ export default function PlansHome(){
    <h2>خطط المؤسسة</h2>
    {!loading&&!plans.length&&<p className="muted">لا توجد خطط متاحة لحسابك حاليًا. يعرض بوصلة للأعضاء الخطط المعتمدة فقط.</p>}
    <div className="institutional-plan-list">{plans.map(p=><Link className="institutional-plan-card" key={p.id} href={"/plans/"+p.id}>
-    <span className="institutional-pill">{p.status==="approved"?"خطة معتمدة":"مسودة قيد الإعداد"}</span>
+    <span className="institutional-pill">{p.status==="approved"?"خطة معتمدة":p.status==="in_review"?"بانتظار المراجع":p.status==="reviewed"?"بانتظار اعتماد المالك":"مسودة قيد الإعداد"}</span>
     <strong>{p.title}</strong>
     <small>{visibleOrgs.find(o=>o.id===p.organization_id)?.name??"المؤسسة"} • {p.period_start} — {p.period_end}</small>
-    <span>{p.status==="approved"?"عرض الخطة ومتابعة تنفيذها":"فتح وتحرير الخطة"} ←</span>
+    <span>{p.status==="approved"?"عرض الخطة ومتابعة تنفيذها":p.status==="draft"?"فتح المسودة":"عرض مسار الاعتماد"} ←</span>
    </Link>)}</div>
   </section>
-  <p className="muted">يمكن لمالك المؤسسة اعتماد الخطة وإقفال نسختها المرجعية ثم تسجيل تحديثات التنفيذ وقياسات المؤشرات. اعتماد اللجان المتعددة وتعديل الخطط المعتمدة عبر طلب تغيير سيُضافان في المرحلة القادمة.</p>
+  <p className="muted">يستطيع مالك المؤسسة تعيين محرر ومراجع مستقل ومشاهد لكل خطة. يتطلب الاعتماد النهائي موافقة المراجع إذا تم تكليفه، بينما تبقى الخطط المعتمدة ثابتة وتُسجّل نتائجها الفعلية بأدلتها.</p>
  </main>;
 }
