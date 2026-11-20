@@ -13,7 +13,8 @@ export function readDesign(value:unknown):Design{
   if(Object.keys(value).length===0)return empty;
   const d=value as Design;
   const rating=(n:number)=>Number.isInteger(n)&&n>=1&&n<=5;
-  const issuesOk=d.issues===undefined||(Array.isArray(d.issues)&&d.issues.every(i=>i&&typeof i.id==="string"&&typeof i.title==="string"&&Array.isArray(i.factorIds)&&i.factorIds.every(id=>typeof id==="string")&&[i.impact,i.urgency,i.confidence].every(rating)));
+  const issuesOk=d.issues===undefined||(Array.isArray(d.issues)&&d.issues.every(i=>i&&typeof i.id==="string"&&typeof i.title==="string"&&Array.isArray(i.factorIds)&&i.factorIds.every(id=>typeof id==="string")&&[i.impact,i.urgency,i.confidence].every(rating)&&
+    (i.teamRatings===undefined||(Array.isArray(i.teamRatings)&&i.teamRatings.every(t=>t&&typeof t.team==="string"&&t.team.trim().length>0&&typeof t.note==="string"&&[t.impact,t.urgency,t.confidence].every(rating))))));
   const optionsOk=d.options===undefined||(Array.isArray(d.options)&&d.options.every(o=>o&&[o.id,o.title,o.issueId,o.internalId,o.externalId].every(x=>typeof x==="string")&&Array.isArray(o.scores)&&o.scores.length===4&&o.scores.every(rating)));
   const weightsOk=d.weights===undefined||(Array.isArray(d.weights)&&d.weights.length===4&&d.weights.every(w=>Number.isFinite(w)&&w>=0&&w<=100)&&d.weights.some(w=>w>0));
   const decisionOk=d.decision===undefined||(d.decision&&[d.decision.optionId,d.decision.reason,d.decision.assumption].every(x=>typeof x==="string"));
@@ -30,7 +31,8 @@ export function workshopAgenda(route:string){
  : ["تحديد نطاق الاستراتيجية والفئات المعنية","جمع الأدلة وتحليل البيئة والقدرات","ترتيب القضايا وبناء البدائل","اختيار التوجه وعرضه للاعتماد"];
 }
 
-export type Issue={id:string;title:string;factorIds:string[];impact:number;urgency:number;confidence:number};
+export type TeamRating={team:string;impact:number;urgency:number;confidence:number;note:string};
+export type Issue={teamRatings?:TeamRating[];id:string;title:string;factorIds:string[];impact:number;urgency:number;confidence:number};
 export type Option={id:string;title:string;issueId:string;internalId:string;externalId:string;scores:number[]};
 export type Decision={optionId:string;reason:string;assumption:string};
 export const criteria=["الأثر المتوقع","قابلية التنفيذ","توافر التمويل","القدرة على إدارة المخاطر"];
@@ -77,4 +79,19 @@ export function prepareWorkshop(route:string,sector:string,minutes?:number){
   return {title,output:outputs[index],minutes:allocated};
  });
  return {preparation,sectorQuestion,sessions};
+}
+
+export const ratingAxes = {impact:"الأثر",urgency:"الإلحاح",confidence:"الثقة بالأدلة"} as const;
+export type RatingAxis=keyof typeof ratingAxes;
+const teamKey=(team:string)=>team.trim().replace(/\s+/g," ").normalize("NFC").toLocaleLowerCase();
+export function withTeamRating(issue:Issue,rating:TeamRating):Issue{
+ const rows=issue.teamRatings??[];
+ const entry={...rating,team:rating.team.trim().replace(/\s+/g," "),note:rating.note.trim()};
+ const index=rows.findIndex(r=>teamKey(r.team)===teamKey(entry.team));
+ return {...issue,teamRatings:index<0?[...rows,entry]:rows.map((r,i)=>i===index?entry:r)};
+}
+export function teamSpread(rows:TeamRating[],axis:RatingAxis){
+ if(rows.length<2)return null;
+ const values=rows.map(r=>r[axis]);
+ return Math.max(...values)-Math.min(...values);
 }
