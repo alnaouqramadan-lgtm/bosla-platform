@@ -14,3 +14,17 @@ test("sensitivity can reverse the preferred option and zero total weight has no 
 test("invalid decision data cannot silently overwrite existing records",()=>{
  assert.throws(()=>readDesign({...readDesign({}),options:[{}]}));
 });
+test("workshop design adapts preparation and preserves every available minute",async()=>{
+ const {prepareWorkshop}=await import("../src/lib/strategy-design.ts");
+ for(const route of ["بناء استراتيجية جديدة","تحديث استراتيجية قائمة"]){
+  for(const minutes of [4,7,61,135,480,10080]){
+   const {sessions}=prepareWorkshop(route,"تعليمي",minutes);
+   assert.equal(sessions.reduce((total,s)=>total+s.minutes,0),minutes);
+   assert.ok(sessions.every(s=>s.minutes>=1&&s.output));
+  }
+ }
+ const legacy=readDesign({route:"تحديث استراتيجية قائمة",sector:"قطاع آخر",duration:"يومان",factors:[]});
+ assert.ok(prepareWorkshop(legacy.route,legacy.sector).sessions.every(s=>s.minutes===null));
+ assert.notEqual(prepareWorkshop(legacy.route,"صحي").sectorQuestion,prepareWorkshop(legacy.route,"تجاري").sectorQuestion);
+ assert.throws(()=>readDesign({...legacy,workshopMinutes:-2}));
+});
