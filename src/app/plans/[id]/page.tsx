@@ -20,6 +20,7 @@ type Section="vision"|"goals"|"activities"|"indicators"|"governance";
 export default function InstitutionalPlan(){
  const {id}=useParams<{id:string}>();const router=useRouter();
  const [plan,setPlan]=useState<StrategicPlan|null>(null);
+ const [canManage,setCanManage]=useState(false);
  const [goals,setGoals]=useState<StrategicGoal[]>([]);
  const [activities,setActivities]=useState<OperationalActivity[]>([]);
  const [indicators,setIndicators]=useState<PerformanceIndicator[]>([]);
@@ -43,6 +44,9 @@ export default function InstitutionalPlan(){
   if(root.error)throw root.error;
   if(!root.data){setPlan(null);return;}
   const current=root.data as StrategicPlan;
+  const access=await supabase.from("planning_organizations").select("owner_id").eq("id",current.organization_id).maybeSingle();
+  if(access.error)throw access.error;
+  setCanManage(access.data?.owner_id===auth.data.user.id);
   const [goalsRes,activityRes,indicatorRes]=await Promise.all([
    supabase.from("planning_strategic_goals").select("id,plan_id,organization_id,code,title,description,strategic_axis,priority,sort_order")
     .eq("plan_id",id).order("sort_order").order("created_at"),
@@ -65,7 +69,7 @@ export default function InstitutionalPlan(){
   .finally(()=>{if(mounted)setLoading(false);});return()=>{mounted=false;};},[load]);
 
  async function action(run:()=>Promise<string>){
-  if(!plan||plan.status!=="draft"||busy)return;
+  if(!plan||!canManage||plan.status!=="draft"||busy)return;
   setBusy(true);setError("");setNotice("");
   try{const success=await run();await load();setNotice(success);}
   catch(e){setError(err(e));}
@@ -156,7 +160,7 @@ export default function InstitutionalPlan(){
   setError("");
  }
  async function remove(kind:"goal"|"activity"|"indicator",rowId:string){
-  if(plan?.status!=="draft"){setError("الخطة معتمدة ولا يُسمح بتغيير سجلاتها.");return;}
+  if(!canManage||plan?.status!=="draft"){setError("لا تملك صلاحية تعديل هذه الخطة.");return;}
   const table=kind==="goal"?"planning_strategic_goals":kind==="activity"?"planning_operational_activities":"planning_performance_indicators";
   if(kind==="goal"&&(activities.some(a=>a.goal_id===rowId)||indicators.some(k=>k.goal_id===rowId))){
    setError("الهدف مرتبط بأنشطة أو مؤشرات. احذف الروابط أولًا قبل حذف الهدف.");return;
@@ -352,7 +356,7 @@ export default function InstitutionalPlan(){
     </div>}
    </article>)}</div>
   </section>}
-  {active==="governance"&&<PlanGovernance plan={plan} activities={activities} indicators={indicators} onReload={load}/>}
+  {active==="governance"&&<PlanGovernance plan={plan} activities={activities} indicators={indicators} onReload={load} canManage={canManage}/>}
   <footer className="card">
    <strong>ضوابط اعتماد الخطة</strong>
    <p className="muted">هذه نسخة إعداد أولية. تُعتمد الخطة حاليًا بواسطة مالك المؤسسة، وتُقفل النسخة المرجعية. تُسجّل تحديثات التنفيذ والقياسات في سجل تاريخي، دون افتراض تحقق النتائج الاستراتيجية من عدد الأنشطة وحده. الاعتماد متعدد المستويات وطلبات تغيير النسخ اللاحقة من تطوير المرحلة التالية.</p>
