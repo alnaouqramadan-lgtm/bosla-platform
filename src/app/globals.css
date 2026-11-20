@@ -21,3 +21,36 @@ a { color:#155a9b; }
 .title { margin: 10px 0 20px; font-size:clamp(22px,4vw,34px); }
 textarea { resize:vertical; }
 @media print { .no-print {display:none!important;} .card { box-shadow:none; break-inside:avoid; } body { background:#fff;} .wrap {max-width:none;} }
+
+/* BOSLA A4 landscape worksheets: browser Print / Save as PDF */
+@media screen {.worksheet-print-report {display:none}}
+@page {size:A4 landscape;margin:7mm}
+@media print {
+  .worksheet-print-report {display:block!important;direction:rtl;font-family:Tahoma,Arial,sans-serif;color:#08224b}
+  .worksheet-page {page-break-after:always;break-after:page;width:100%;background:#fff}
+  .worksheet-page:last-child {page-break-after:auto;break-after:auto}
+  .worksheet-head {display:grid;grid-template-columns:1fr 2.2fr 1fr;gap:3mm;align-items:stretch;margin-bottom:3mm}
+  .worksheet-identity,.worksheet-number,.worksheet-heading {padding:3mm;border-radius:3mm;border:1px solid #3a87bc}
+  .worksheet-identity {display:flex;flex-direction:column;gap:2mm;justify-content:center;font-weight:bold;font-size:10pt}
+  .worksheet-number {display:flex;align-items:center;justify-content:center;background:#092a62;color:#fff;font-size:15pt;font-weight:bold}
+  .worksheet-heading {background:#07529a;color:#fff;text-align:center}
+  .worksheet-heading h2 {font-size:21pt;margin:0 0 1mm}
+  .worksheet-heading p {font-size:10pt;margin:0}
+  .worksheet-members {border:1px solid #5591b2;border-radius:3mm;display:flex;justify-content:space-between;padding:3mm 5mm;font-weight:bold;font-size:10pt;margin-bottom:3mm}
+  .worksheet-table-title {margin:0;background:#d7ebfc;color:#092a62;text-align:center;padding:3mm;border:1px solid #4385ab;border-radius:3mm 3mm 0 0;font-size:15pt}
+  .worksheet-table {width:100%;border-collapse:collapse;table-layout:fixed;font-size:8.5pt}
+  .worksheet-table thead {display:table-header-group}
+  .worksheet-table th {background:#d4e7fa;color:#092a62;font-weight:700;border:1px solid #afc6d7;padding:3mm 1mm;text-align:center}
+  .worksheet-table td {border:1px solid #bdcbd7;padding:2.4mm 1.5mm;white-space:pre-wrap;overflow-wrap:anywhere;vertical-align:middle;min-height:10mm}
+  .worksheet-table tr {break-inside:avoid}
+  .worksheet-table tbody tr:nth-child(even) {background:#f6faff}
+  .worksheet-panels {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3mm;margin-top:4mm}
+  .worksheet-panel {border:1px solid #b0b5c8;border-radius:3mm;overflow:hidden;break-inside:avoid}
+  .worksheet-panel h3 {text-align:center;font-size:12pt;padding:2.3mm;margin:0}
+  .worksheet-panel p {padding:4mm 3mm;min-height:20mm;font-size:9pt;margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .worksheet-panel.purple h3 {background:#ede1f8;color:#612189}
+  .worksheet-panel.gold h3 {background:#fff0cd;color:#6c4103}
+  .worksheet-panel.green h3 {background:#dff5e4;color:#125d2b}
+  .worksheet-priority {background:#eee2f7;color:#67208b;border:1px solid #c09ade;border-radius:3mm;text-align:center;padding:3mm;font-size:10pt;font-weight:bold;margin:3mm 0}
+  .worksheet-footnote {font-size:8pt;color:#5a6070;margin:2mm 0 0}
+}
