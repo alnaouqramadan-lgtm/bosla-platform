@@ -93,12 +93,12 @@ export default function PlansHome(){
    <h2>خطط المؤسسة</h2>
    {!loading&&!plans.length&&<p className="muted">لا توجد خطط محفوظة بعد. أنشئ أول مسودة من النموذج أعلاه.</p>}
    <div className="institutional-plan-list">{plans.map(p=><Link className="institutional-plan-card" key={p.id} href={"/plans/"+p.id}>
-    <span className="institutional-pill">مسودة قيد الإعداد</span>
+    <span className="institutional-pill">{p.status==="approved"?"خطة معتمدة":"مسودة قيد الإعداد"}</span>
     <strong>{p.title}</strong>
     <small>{orgs.find(o=>o.id===p.organization_id)?.name??"المؤسسة"} • {p.period_start} — {p.period_end}</small>
-    <span>فتح وتحرير الخطة ←</span>
+    <span>{p.status==="approved"?"عرض الخطة ومتابعة تنفيذها":"فتح وتحرير الخطة"} ←</span>
    </Link>)}</div>
   </section>
-  <p className="muted">هذه المرحلة تشمل إعداد مسودات مؤسسية؛ الاعتماد الرسمي وإدخال الإنجاز الفعلي سيُضافان بسير عمل مستقل، دون تحويل المسودات تلقائيًا إلى خطط معتمدة.</p>
+  <p className="muted">يمكن لمالك المؤسسة اعتماد الخطة وإقفال نسختها المرجعية ثم تسجيل تحديثات التنفيذ وقياسات المؤشرات. اعتماد اللجان المتعددة وتعديل الخطط المعتمدة عبر طلب تغيير سيُضافان في المرحلة القادمة.</p>
  </main>;
 }
