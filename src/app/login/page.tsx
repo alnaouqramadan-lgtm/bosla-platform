@@ -2,9 +2,15 @@
 import {useState,type FormEvent} from "react";
 import {useRouter} from "next/navigation";
 import {supabase} from "@/lib/supabase";
-function describeAuthError(e:unknown):string {
+function describeAuthError(e:unknown,register:boolean):string {
  const info=e && typeof e==="object" ? e as {code?:string;status?:number;message?:string} : {};
- const message=info.message||String(e);
+ const message=typeof info.message==="string"?info.message.trim():typeof e==="string"?e.trim():"";
+ if(info.status===504||info.code==="request_timeout"||/timeout|deadline exceeded/i.test(message)){
+  return register?"انتهت مهلة طلب التسجيل. تحقّق من بريدك ومجلد الرسائل غير المرغوب فيها قبل إعادة المحاولة.":"انتهت مهلة الاتصال. حاول تسجيل الدخول مجددًا.";
+ }
+ if(!message||/^\{\s*\}$/.test(message)||message==="[object Object]"){
+  return register?"تعذّر التحقق من نتيجة التسجيل. افحص بريدك بحثًا عن رسالة التفعيل قبل إعادة المحاولة.":"تعذّر التحقق من تسجيل الدخول. حاول مجددًا.";
+ }
  if(info.code==="over_email_send_rate_limit" || /email rate limit exceeded/i.test(message)){
   return "تعذّر إرسال رسالة التحقق: بلغت خدمة البريد حد الإرسال المؤقت في مشروع بوصلة. لا تكرر إنشاء الحساب الآن؛ يلزم إعداد SMTP بواسطة مسؤول المنصة.";
  }
@@ -37,7 +43,7 @@ export default function Login(){
    if(result.error)throw result.error;
    redirect();
   }
- }catch(e){setError(describeAuthError(e));}finally{setBusy(false);}
+ }catch(e){setError(describeAuthError(e,register));}finally{setBusy(false);}
  }
  return <main className="wrap" style={{maxWidth:550}}>
  <h1 className="title">🧭 بوصلة | BOSLA AI</h1><section className="card">
