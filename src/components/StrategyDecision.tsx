@@ -1,5 +1,6 @@
 "use client";
 import {useState} from "react";
+import IssueTeamRatings from "./IssueTeamRatings";
 import {criteria,weightedScore,type Design} from "@/lib/strategy-design";
 
 type Props={data:Design;editable:boolean;busy:boolean;save:(next:Design)=>Promise<boolean>};
@@ -27,7 +28,9 @@ export default function StrategyDecision({data,editable,busy,save}:Props){
  const text=(id:string)=>data.factors.find(f=>f.id===id)?.statement??"";
  return <>
   <h3>القضايا الاستراتيجية</h3>
-  {issues.map(i=><article key={i.id}><strong>{i.title}</strong><p>الأثر {i.impact}/5 · الإلحاح {i.urgency}/5 · قوة الأدلة {i.confidence}/5</p><ul>{i.factorIds.map(id=><li key={id}>{text(id)}</li>)}</ul></article>)}
+  {issues.map(i=><article key={i.id}><strong>{i.title}</strong><p>الأثر {i.impact}/5 · الإلحاح {i.urgency}/5 · قوة الأدلة {i.confidence}/5</p><ul>{i.factorIds.map(id=><li key={id}>{text(id)}</li>)}</ul>
+   <IssueTeamRatings issue={i} editable={editable} busy={busy} onSave={updated=>save({...data,issues:issues.map(row=>row.id===updated.id?updated:row)})}/>
+  </article>)}
   {editable&&data.factors.length>0&&<details><summary>صياغة قضية من العوامل</summary><form className="stack" onSubmit={async e=>{
    e.preventDefault();if(!issueTitle.trim()||!links.length)return;
    if(await save({...data,issues:[...issues,{id:crypto.randomUUID(),title:issueTitle.trim(),factorIds:links,impact:ratings[0],urgency:ratings[1],confidence:ratings[2]}]})){setIssueTitle("");setLinks([]);}

@@ -28,3 +28,19 @@ test("workshop design adapts preparation and preserves every available minute",a
  assert.notEqual(prepareWorkshop(legacy.route,"صحي").sectorQuestion,prepareWorkshop(legacy.route,"تجاري").sectorQuestion);
  assert.throws(()=>readDesign({...legacy,workshopMinutes:-2}));
 });
+test("team comparison keeps the institutional rating and distinguishes one team from consensus",async()=>{
+ const {withTeamRating,teamSpread}=await import("../src/lib/strategy-design.ts");
+ const issue={id:"i",title:"قضية",factorIds:[],impact:2,urgency:3,confidence:4};
+ const first={team:"فريق البرامج",impact:5,urgency:4,confidence:2,note:"محضر الورشة"};
+ const one=withTeamRating(issue,first);
+ assert.equal(teamSpread(one.teamRatings,"impact"),null);
+ const two=withTeamRating(one,{...first,team:"فريق المالية",impact:2,confidence:5});
+ assert.deepEqual(["impact","urgency","confidence"].map(axis=>teamSpread(two.teamRatings,axis)),[3,0,3]);
+ const revised=withTeamRating(two,{...first,team:"  فريق   البرامج  ",impact:4});
+ assert.equal(revised.teamRatings.length,2);
+ assert.equal(revised.impact,2);
+ assert.equal(two.teamRatings[0].impact,5);
+ const design={...readDesign({}),issues:[revised]};
+ assert.equal(readDesign(design).issues[0].teamRatings[0].impact,4);
+ assert.throws(()=>readDesign({...design,issues:[{...issue,teamRatings:[{...first,urgency:6}]}]}));
+});
