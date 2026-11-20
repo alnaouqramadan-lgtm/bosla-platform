@@ -1,3 +1,4 @@
+import type {ReactNode} from "react";
 import type {Answer,Group,Participant,Workshop} from "@/lib/types";
 import {
   worksheetGroups,worksheetLines,worksheetPairs,worksheetValue,type WorksheetGroup
@@ -22,7 +23,7 @@ function PageHeader({g,number,title,subtitle}:{
    <span key={i}>{i+1}. {p}</span>)}</span></div></>;
 }
 function Block({title,color="blue",children}:{
- title:string;color?:string;children:React.ReactNode
+ title:string;color?:string;children:ReactNode
 }){return <section className={"bosla-ws-box bosla-ws-"+color}>
  <h4>{title}</h4><div className="bosla-ws-inner">{children}</div></section>;}
 function Lines({values,count=5,checks=false}:{
