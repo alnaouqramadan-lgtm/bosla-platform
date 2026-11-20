@@ -11,7 +11,7 @@ const fmt=(value:number|null|undefined)=>value==null?"—":new Intl.NumberFormat
 const textDate=(value:string|null|undefined)=>value||"—";
 const errorText=(e:unknown)=>e instanceof Error?e.message:String(e);
 const localToday=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
-const status:Record<DeliveryFlag,string>={scheduled:"مجدول لاحقًا",completed:"مكتمل",blocked:"متعثر",
+const status:Record<DeliveryFlag,string>={future_period:"الفترة لم تبدأ",scheduled:"مجدول لاحقًا",completed:"مكتمل",blocked:"متعثر",
  overdue:"متأخر",in_progress:"قيد التنفيذ",unreported:"لا يوجد تقرير"};
 const verdict:Record<Attainment,string>={met:"تحقق المستهدف",not_met:"دون المستهدف",unmeasured:"غير مقاس",
  unknown_direction:"اتجاه النجاح غير محدد"};
@@ -198,7 +198,7 @@ export default function InstitutionalPeriodicReportPage(){
     <div><strong>{report.totals.periodActivityUpdates}</strong><span>تحديثات الأنشطة داخل الفترة</span></div>
     <div><strong>{report.totals.periodKpiReadings}</strong><span>قراءات KPI داخل الفترة</span></div>
    </div>
-   <p className="bosla-report-note">مؤشرات التقدم تعبّر عن حالة الأنشطة المسجلة، ولا تعني تلقائيًا تحقيق الأهداف الاستراتيجية أو الأثر.</p>
+   <p className="bosla-report-note">مؤشرات التقدم تعبّر عن حالة الأنشطة المسجلة، ولا تعني تلقائيًا تحقيق الأهداف الاستراتيجية أو الأثر. فئتا المتأخر والمتعثر، وكذلك فئة الأنشطة بلا تقرير، قد تتداخل ولا يُجمع عددها للوصول إلى إجمالي الأنشطة.</p>
    <h3>2. متابعة أنشطة الخطة التشغيلية</h3>
    <div className="bosla-report-table-wrap"><table>
     <thead><tr><th>الهدف المرتبط</th><th>النشاط</th><th>المسؤول</th><th>موعد النهاية</th>
