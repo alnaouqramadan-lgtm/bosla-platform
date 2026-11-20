@@ -12,9 +12,9 @@ const err=(e:unknown)=>e instanceof Error?e.message:String(e);
 const n=(value:number|null|undefined)=>value==null?"—":new Intl.NumberFormat("ar").format(value);
 const emptyActivity={goal_id:"",title:"",program_name:"",project_name:"",target_group:"",
  target_quantity:"",target_unit:"",owner_name:"",planned_start:"",planned_end:"",
- estimated_budget:"",currency_code:"ILS" as const,risk_notes:""};
+ estimated_budget:"",currency_code:"ILS" as OperationalActivity["currency_code"],risk_notes:""};
 const emptyKpi={goal_id:"",title:"",unit:"",baseline:"",target:"",
- verification_source:"",frequency:"quarterly" as const,methodology:""};
+ verification_source:"",frequency:"quarterly" as PerformanceIndicator["frequency"],methodology:""};
 type Section="vision"|"goals"|"activities"|"indicators";
 export default function InstitutionalPlan(){
  const {id}=useParams<{id:string}>();const router=useRouter();
@@ -26,6 +26,9 @@ export default function InstitutionalPlan(){
  const [goal,setGoal]=useState({title:"",description:"",strategic_axis:"",code:"",priority:3});
  const [activity,setActivity]=useState({...emptyActivity});
  const [kpi,setKpi]=useState({...emptyKpi});
+ const [editingGoalId,setEditingGoalId]=useState("");
+ const [editingActivityId,setEditingActivityId]=useState("");
+ const [editingKpiId,setEditingKpiId]=useState("");
  const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");const [notice,setNotice]=useState("");
  const [active,setActive]=useState<Section>("vision");
@@ -77,12 +80,17 @@ export default function InstitutionalPlan(){
  }
  function createGoal(e:FormEvent){e.preventDefault();
   void action(async()=>{
-   const x=await supabase.from("planning_strategic_goals").insert({
-    ...goal,title:goal.title.trim(),organization_id:plan!.organization_id,plan_id:id,sort_order:goals.length
-   }).select("id").single();
+   const data={...goal,title:goal.title.trim()};
+   const x=editingGoalId
+    ?await supabase.from("planning_strategic_goals").update(data)
+     .eq("id",editingGoalId).eq("plan_id",id).select("id").single()
+    :await supabase.from("planning_strategic_goals").insert({
+     ...data,organization_id:plan!.organization_id,plan_id:id,sort_order:goals.length
+    }).select("id").single();
    if(x.error)throw x.error;
    setGoal({title:"",description:"",strategic_axis:"",code:"",priority:3});
-   return "تمت إضافة الهدف الاستراتيجي.";
+   setEditingGoalId("");
+   return editingGoalId?"تم تحديث الهدف الاستراتيجي.":"تمت إضافة الهدف الاستراتيجي.";
   });
  }
  function createActivity(e:FormEvent){e.preventDefault();
@@ -97,23 +105,54 @@ export default function InstitutionalPlan(){
     currency_code:activity.currency_code,risk_notes:activity.risk_notes
    };
    if(data.planned_start&&data.planned_end)validatePlanPeriod(data.planned_start,data.planned_end);
-   const x=await supabase.from("planning_operational_activities").insert(data).select("id").single();
+   const x=editingActivityId
+    ?await supabase.from("planning_operational_activities").update(data)
+      .eq("id",editingActivityId).eq("plan_id",id).select("id").single()
+    :await supabase.from("planning_operational_activities").insert(data).select("id").single();
    if(x.error)throw x.error;
    setActivity({...emptyActivity,goal_id:activity.goal_id});
-   return "تمت إضافة النشاط التشغيلي وربطه بهدفه.";
+   setEditingActivityId("");
+   return editingActivityId?"تم تحديث النشاط التشغيلي.":"تمت إضافة النشاط التشغيلي وربطه بهدفه.";
   });
  }
  function createKpi(e:FormEvent){e.preventDefault();
   void action(async()=>{
-   const x=await supabase.from("planning_performance_indicators").insert({
-    organization_id:plan!.organization_id,plan_id:id,goal_id:kpi.goal_id,title:kpi.title.trim(),
+   const data={goal_id:kpi.goal_id,title:kpi.title.trim(),
     unit:kpi.unit,baseline:optionalNumber(kpi.baseline),target:optionalNumber(kpi.target),
-    verification_source:kpi.verification_source,frequency:kpi.frequency,methodology:kpi.methodology
-   }).select("id").single();
+    verification_source:kpi.verification_source,frequency:kpi.frequency,methodology:kpi.methodology};
+   const x=editingKpiId
+    ?await supabase.from("planning_performance_indicators").update(data)
+      .eq("id",editingKpiId).eq("plan_id",id).select("id").single()
+    :await supabase.from("planning_performance_indicators").insert({
+     ...data,organization_id:plan!.organization_id,plan_id:id
+    }).select("id").single();
    if(x.error)throw x.error;
    setKpi({...emptyKpi,goal_id:kpi.goal_id});
-   return "تمت إضافة مؤشر الأداء المرتبط بهدفه.";
+   setEditingKpiId("");
+   return editingKpiId?"تم تحديث مؤشر الأداء.":"تمت إضافة مؤشر الأداء المرتبط بهدفه.";
   });
+ }
+ function beginGoalEdit(g:StrategicGoal){
+  setEditingGoalId(g.id);setGoal({title:g.title,description:g.description,
+   strategic_axis:g.strategic_axis,code:g.code,priority:g.priority});setError("");
+ }
+ function beginActivityEdit(a:OperationalActivity){
+  setEditingActivityId(a.id);
+  setActivity({goal_id:a.goal_id,title:a.title,program_name:a.program_name,
+   project_name:a.project_name,target_group:a.target_group,
+   target_quantity:a.target_quantity==null?"":String(a.target_quantity),target_unit:a.target_unit,
+   owner_name:a.owner_name,planned_start:a.planned_start??"",planned_end:a.planned_end??"",
+   estimated_budget:a.estimated_budget==null?"":String(a.estimated_budget),
+   currency_code:a.currency_code,risk_notes:a.risk_notes});
+  setError("");
+ }
+ function beginKpiEdit(k:PerformanceIndicator){
+  setEditingKpiId(k.id);
+  setKpi({goal_id:k.goal_id,title:k.title,unit:k.unit,
+   baseline:k.baseline==null?"":String(k.baseline),
+   target:k.target==null?"":String(k.target),
+   verification_source:k.verification_source,frequency:k.frequency,methodology:k.methodology});
+  setError("");
  }
  async function remove(kind:"goal"|"activity"|"indicator",rowId:string){
   const table=kind==="goal"?"planning_strategic_goals":kind==="activity"?"planning_operational_activities":"planning_performance_indicators";
@@ -203,12 +242,18 @@ export default function InstitutionalPlan(){
      {[1,2,3,4,5].map(v=><option key={v} value={v}>{v}</option>)}
     </select></label>
     <label className="institutional-span">وصف الهدف / النتائج المتوقعة<textarea rows={2} className="field" maxLength={5000} value={goal.description} onChange={e=>setGoal(p=>({...p,description:e.target.value}))}/></label>
-    <button className="primary institutional-span" disabled={busy}>إضافة هدف استراتيجي</button>
+    <div className="institutional-span institutional-actions">
+     <button className="primary" disabled={busy}>{editingGoalId?"حفظ تعديل الهدف":"إضافة هدف استراتيجي"}</button>
+     {editingGoalId&&<button type="button" className="secondary" disabled={busy} onClick={()=>{setEditingGoalId("");setGoal({title:"",description:"",strategic_axis:"",code:"",priority:3});}}>إلغاء التعديل</button>}
+    </div>
    </form>
    <div className="institutional-records">{goals.map(g=><article key={g.id} className="institutional-record">
     <div><span className="institutional-pill">{g.code||"هدف"} • أولوية {g.priority}</span><h3>{g.title}</h3>
      <small>{g.strategic_axis}</small><p>{g.description}</p></div>
-    <button className="secondary" disabled={busy} onClick={()=>void remove("goal",g.id)}>حذف</button>
+    <div className="institutional-actions">
+      <button className="secondary" disabled={busy} onClick={()=>beginGoalEdit(g)}>تعديل</button>
+      <button className="secondary" disabled={busy} onClick={()=>void remove("goal",g.id)}>حذف</button>
+    </div>
    </article>)}</div>
   </section>}
   {active==="activities"&&<section className="card institutional-card">
@@ -229,14 +274,20 @@ export default function InstitutionalPlan(){
     <label>العملة<select className="field" value={activity.currency_code} onChange={e=>setActivity(p=>({...p,currency_code:e.target.value as typeof activity.currency_code}))}>
      {["ILS","USD","EUR","JOD","EGP"].map(v=><option key={v} value={v}>{v}</option>)}</select></label>
     <label className="institutional-span">المخاطر أو الاحتياجات<textarea className="field" rows={2} value={activity.risk_notes} onChange={e=>setActivity(p=>({...p,risk_notes:e.target.value}))}/></label>
-    <button className="primary institutional-span" disabled={busy||!activity.goal_id}>إضافة النشاط إلى الخطة التشغيلية</button>
+    <div className="institutional-span institutional-actions">
+     <button className="primary" disabled={busy||!activity.goal_id}>{editingActivityId?"حفظ تعديل النشاط":"إضافة النشاط إلى الخطة التشغيلية"}</button>
+     {editingActivityId&&<button className="secondary" type="button" disabled={busy} onClick={()=>{setEditingActivityId("");setActivity({...emptyActivity,goal_id:goals[0]?.id??""});}}>إلغاء التعديل</button>}
+    </div>
    </form>}
    <div className="institutional-records">{activities.map(a=><article key={a.id} className="institutional-record">
     <div><span className="institutional-pill">{a.program_name||"برنامج غير محدد"}</span><h3>{a.title}</h3>
      <p><strong>الهدف:</strong> {goalName(a.goal_id)}</p>
      <small>{a.owner_name||"مسؤول غير محدد"} • {a.planned_start||"—"} إلى {a.planned_end||"—"}</small>
      <p>المستهدف: {n(a.target_quantity)} {a.target_unit} • التكلفة: {n(a.estimated_budget)} {a.currency_code}</p></div>
-    <button className="secondary" disabled={busy} onClick={()=>void remove("activity",a.id)}>حذف</button>
+    <div className="institutional-actions">
+     <button className="secondary" disabled={busy} onClick={()=>beginActivityEdit(a)}>تعديل</button>
+     <button className="secondary" disabled={busy} onClick={()=>void remove("activity",a.id)}>حذف</button>
+    </div>
    </article>)}</div>
   </section>}
   {active==="indicators"&&<section className="card institutional-card">
@@ -252,13 +303,19 @@ export default function InstitutionalPlan(){
      {Object.entries(frequencyLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
     <label>مصدر التحقق<input className="field" value={kpi.verification_source} onChange={e=>setKpi(p=>({...p,verification_source:e.target.value}))}/></label>
     <label className="institutional-span">طريقة احتساب المؤشر<textarea className="field" rows={2} value={kpi.methodology} onChange={e=>setKpi(p=>({...p,methodology:e.target.value}))}/></label>
-    <button className="primary institutional-span" disabled={busy||!kpi.goal_id}>إضافة المؤشر</button>
+    <div className="institutional-span institutional-actions">
+     <button className="primary" disabled={busy||!kpi.goal_id}>{editingKpiId?"حفظ تعديل المؤشر":"إضافة المؤشر"}</button>
+     {editingKpiId&&<button className="secondary" type="button" disabled={busy} onClick={()=>{setEditingKpiId("");setKpi({...emptyKpi,goal_id:goals[0]?.id??""});}}>إلغاء التعديل</button>}
+    </div>
    </form>}
    <div className="institutional-records">{indicators.map(k=><article key={k.id} className="institutional-record">
     <div><span className="institutional-pill">{frequencyLabels[k.frequency]}</span><h3>{k.title}</h3>
      <p><strong>الهدف:</strong> {goalName(k.goal_id)}</p>
      <small>خط الأساس: {n(k.baseline)} • المستهدف: {n(k.target)} {k.unit} • المصدر: {k.verification_source||"غير محدد"}</small></div>
-    <button className="secondary" disabled={busy} onClick={()=>void remove("indicator",k.id)}>حذف</button>
+    <div className="institutional-actions">
+     <button className="secondary" disabled={busy} onClick={()=>beginKpiEdit(k)}>تعديل</button>
+     <button className="secondary" disabled={busy} onClick={()=>void remove("indicator",k.id)}>حذف</button>
+    </div>
    </article>)}</div>
   </section>}
   <footer className="card">
