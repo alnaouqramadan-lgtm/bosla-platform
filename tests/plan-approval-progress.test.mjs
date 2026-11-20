@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {execFileSync} from "node:child_process";
 import {fileURLToPath,pathToFileURL} from "node:url";
-const sql=readFileSync(new URL("../supabase/migrations/20261120140000_plan_approval_progress_v1.sql",import.meta.url),"utf8");
+const sql=readFileSync(new URL("../supabase/migrations/20261120133949_bosla_plan_approval_progress_v1.sql",import.meta.url),"utf8");
 const plan=readFileSync(new URL("../src/app/plans/[id]/page.tsx",import.meta.url),"utf8");
 const index=readFileSync(new URL("../src/app/plans/page.tsx",import.meta.url),"utf8");
 const view=readFileSync(new URL("../src/components/PlanGovernance.tsx",import.meta.url),"utf8");
