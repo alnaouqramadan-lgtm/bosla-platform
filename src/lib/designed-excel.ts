@@ -46,7 +46,7 @@ function base(book:Workbook,name:string,workshop:Workshop,title:string,sub:strin
   tab.getRow(4).height=28;
   merged(tab,5,1,last,"رقم المجموعة: ____________       أعضاء المجموعة: 1. ____________   2. ____________   3. ____________",C.white,C.ink,11);
   tab.getRow(5).height=28;
-  tab.headerFooter.oddFooter={center:{text:"BOSLA AI — "+name},right:{text:"صفحة &P من &N"}};
+  tab.headerFooter.oddFooter="&CBOSLA AI — "+name+" &Rصفحة &P من &N";
   return tab;
 }
 function headers(tab:Worksheet,columns:string[],row=7) {
@@ -89,7 +89,7 @@ function panels(tab:Worksheet,fromRow:number,count:number,
   tab.getRow(fromRow+3).height=38;
   merged(tab,fromRow+5,1,count,note,C.yellow,C.ink,10);
   tab.getRow(fromRow+5).height=38;
-  tab.printArea="A1:"+String.fromCharCode(64+count)+(fromRow+5);
+  tab.pageSetup.printArea="A1:"+String.fromCharCode(64+count)+(fromRow+5);
 }
 function general(book:Workbook,workshop:Workshop,reviews:FormReview[],stage:number) {
   const def=STAGES[stage-1];
@@ -100,7 +100,7 @@ function general(book:Workbook,workshop:Workshop,reviews:FormReview[],stage:numb
   const last=8+def.fields.length;
   merged(tab,last,1,2,"المصدر: الصياغات التي اعتمدها ميسّر الورشة. لا تُصدّر الإجابات غير المعتمدة كنقاط نهائية.",C.yellow,C.ink,10);
   tab.getRow(last).height=35;
-  tab.printArea="A1:B"+last;
+  tab.pageSetup.printArea="A1:B"+last;
 }
 export function appendDesignedWorksheets(book:Workbook,workshop:Workshop,reviews:FormReview[]) {
   const data=worksheetData(reviews);
