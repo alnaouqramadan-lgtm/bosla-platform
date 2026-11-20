@@ -93,12 +93,12 @@ export default function PlansHome(){
    <h2>خطط المؤسسة</h2>
    {!loading&&!plans.length&&<p className="muted">لا توجد خطط محفوظة بعد. أنشئ أول مسودة من النموذج أعلاه.</p>}
    <div className="institutional-plan-list">{plans.map(p=><Link className="institutional-plan-card" key={p.id} href={"/plans/"+p.id}>
-    <span className="institutional-pill">{p.status==="approved"?"خطة معتمدة":"مسودة قيد الإعداد"}</span>
+    <span className="institutional-pill">{p.status==="approved"?"خطة معتمدة":p.status==="in_review"?"بانتظار المراجع":p.status==="reviewed"?"بانتظار اعتماد المالك":"مسودة قيد الإعداد"}</span>
     <strong>{p.title}</strong>
     <small>{orgs.find(o=>o.id===p.organization_id)?.name??"المؤسسة"} • {p.period_start} — {p.period_end}</small>
-    <span>{p.status==="approved"?"عرض الخطة ومتابعة تنفيذها":"فتح وتحرير الخطة"} ←</span>
+    <span>{p.status==="approved"?"عرض الخطة ومتابعة تنفيذها":p.status==="draft"?"فتح المسودة":"عرض مسار الاعتماد"} ←</span>
    </Link>)}</div>
   </section>
-  <p className="muted">يمكن لمالك المؤسسة اعتماد الخطة وإقفال نسختها المرجعية ثم تسجيل تحديثات التنفيذ وقياسات المؤشرات. اعتماد اللجان المتعددة وتعديل الخطط المعتمدة عبر طلب تغيير سيُضافان في المرحلة القادمة.</p>
+  <p className="muted">يمكن لمالك المؤسسة تفويض محررين ومشاهدين ومراجع مستقل لكل خطة، ثم اعتمادها بعد قرار المراجع. تبقى النسخ المعتمدة مقفلة وتُسجّل القياسات بأدلتها. تغيير الخطط المعتمدة عبر إصدارات جديدة سيُضاف لاحقًا.</p>
  </main>;
 }
