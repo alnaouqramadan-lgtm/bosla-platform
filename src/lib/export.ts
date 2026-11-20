@@ -46,7 +46,7 @@ export async function exportWorkbook(
    for(let i=1;i<=12;i++)tab.getColumn(i).width=13.5;
    for(let i=1;i<=29;i++)tab.getRow(i).height=26;
    const put=(range:string,value:string|number,fill:string="FFFFFFFF",font="FF0C2D55",bold=false,size=11)=>{
-    tab.mergeCells(range);
+    if(range.includes(":")&&range.split(":")[0]!==range.split(":")[1])tab.mergeCells(range);
     const cell=tab.getCell(range.split(":")[0]);cell.value=safe(value);
     cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:fill}};
     cell.font={name:"Arial",size,bold,color:{argb:font}};
