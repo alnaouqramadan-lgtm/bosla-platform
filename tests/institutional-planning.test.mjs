@@ -5,7 +5,7 @@ import {execFileSync} from "node:child_process";
 import {fileURLToPath,pathToFileURL} from "node:url";
 
 const read=p=>readFileSync(new URL(p,import.meta.url),"utf8");
-const sql=read("../supabase/migrations/20261120110000_institutional_planning_foundation.sql");
+const sql=read("../supabase/migrations/20261120101954_bosla_institutional_planning_foundation_v1.sql");
 const home=read("../src/app/plans/page.tsx");
 const detail=read("../src/app/plans/[id]/page.tsx");
 const dashboard=read("../src/app/dashboard/page.tsx");
