@@ -81,6 +81,8 @@ export async function exportWorkbook(
    s.heading("E7:F7","النطاق / المنطقة");s.heading("G7:H7","أهم المواقع / أماكن العمل");
    const teams=worksheetPairs(g,1,"teams",5),scopes=worksheetLines(g,1,"scope",5);
    const places=worksheetLines(g,1,"locations",5),targets=worksheetLines(g,1,"target_groups",5);
+   const counts=teams.map(p=>p[1]).filter(Boolean).map(Number);
+   const teamTotal=counts.length&&counts.every(Number.isFinite)?counts.reduce((a,b)=>a+b,0):"";
    for(let i=0;i<5;i++){
     const r=i+8;
     s.data("A"+r+":B"+r,teams[i]?.[0]??"");
@@ -89,6 +91,7 @@ export async function exportWorkbook(
     s.data("G"+r+":H"+r,places[i]??"");
     s.data("I"+r+":L"+r,targets[i]??"");
    }
+   s.heading("A13:B13","الإجمالي",s.pale);s.data("C13:D13",teamTotal);
    s.heading("A14:D14","4. اللجان والمهام المركزية");
    s.heading("E14:H14","5. الخدمات والأنشطة الحالية",s.gold);
    s.heading("I14:L14","أبرز الإنجازات الحالية",s.green);
@@ -137,6 +140,7 @@ export async function exportWorkbook(
     const r=i+8;s.data("A"+r+":A"+r,i+1);
     s.data("B"+r+":G"+r,goals[i]??"");s.data("H"+r+":I"+r,ranks[i]??"");
     s.data("J"+r+":L"+r,"□ "+criteria[i]);s.tab.getRow(r).height=39;
+    s.tab.getCell("H"+r).dataValidation={type:"list",allowBlank:true,formulae:['"مرتفع,متوسط,منخفض"']};
    }
    s.heading("A15:F15","مؤشرات النجاح العامة",s.green);
    s.heading("G15:L15","النتيجة المتوقعة",s.gold);
