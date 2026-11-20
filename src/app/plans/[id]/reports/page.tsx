@@ -51,6 +51,7 @@ export default function InstitutionalPeriodicReportPage(){
  const [exporting,setExporting]=useState(false);
  const [error,setError]=useState("");
  const [sourceError,setSourceError]=useState("");
+ const [loadedHistoryKey,setLoadedHistoryKey]=useState("");
 
  useEffect(()=>{let alive=true;
   async function load(){
@@ -106,7 +107,7 @@ export default function InstitutionalPeriodicReportPage(){
       baseColumns+",indicator_id,measured_on,actual_value,evidence_reference,notes,created_at",
       plan!.id,"measured_on",cutoff,plan!.period_start)
     ]);
-    if(alive){setUpdates(a);setMeasurements(k);}
+    if(alive){setUpdates(a);setMeasurements(k);setLoadedHistoryKey(plan!.id+":"+cutoff);}
    }catch(e){if(alive)setSourceError(errorText(e));}
    finally{if(alive)setLoading(false);}
   }
@@ -117,7 +118,7 @@ export default function InstitutionalPeriodicReportPage(){
   plan,goals,activities,indicators,reports:updates,measurements,
   period:kind,year,slot,today
  }):null,[plan,goals,activities,indicators,updates,measurements,kind,year,slot,today]);
- const ready=report&&!loading&&!setupLoading&&!sourceError;
+ const ready=report&&!loading&&!setupLoading&&!sourceError&&loadedHistoryKey===plan?.id+":"+cutoff;
  const years=useMemo(()=>{
   if(!plan)return [year];
   const first=Number(plan.period_start.slice(0,4)),last=Number(plan.period_end.slice(0,4));
