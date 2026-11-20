@@ -4,7 +4,7 @@ import {
   worksheetGroups,worksheetLines,worksheetPairs,worksheetValue,type WorksheetGroup
 } from "@/lib/worksheet-model";
 
-type Props={workshop:Workshop;answers:Answer[];groups:Group[];participants:Participant[]};
+type Props={workshop:Workshop;answers:Answer[];groups:Group[];participants:Participant[];organizationName?:string};
 function fill<T>(items:T[],count:number,empty:T):T[]{
   return Array.from({length:Math.max(items.length,count)},(_,i)=>items[i]??empty);
 }
@@ -99,9 +99,9 @@ function Goals({g}:{g:WorksheetGroup}){
    <span>{ordered.map((v,i)=><span key={i}>{i+1}. {v||".............................."}　</span>)}</span></div>
  </article>;
 }
-export default function WorksheetPrint({workshop,answers,groups,participants}:Props){
+export default function WorksheetPrint({workshop,answers,groups,participants,organizationName}:Props){
  return <div className="bosla-worksheet-print" aria-label="أوراق العمل الجاهزة للطباعة">
-  {worksheetGroups(workshop,answers,groups,participants).map(g=><div key={g.id}>
+  {worksheetGroups(workshop,answers,groups,participants,organizationName).map(g=><div key={g.id}>
    <Reality g={g}/><Swot g={g}/><Goals g={g}/>
   </div>)}
  </div>;
