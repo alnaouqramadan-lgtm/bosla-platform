@@ -60,7 +60,8 @@ test("institutional screens can create plans, goals, linked activities and KPIs"
 test("approval and monitoring must remain separate from unapproved drafts",()=>{
  assert.match(sql,/check \(status='draft'\)/);
  assert.match(detail,/مسودة غير معتمدة/);
- assert.match(detail,/تسجيل الإنجازات وإقرار الخطة ونشر الإصدارات النهائية غير مفعّل/);
+ assert.match(detail,/active==="governance"&&<PlanGovernance/);
+ assert.match(detail,/plan.status!=="draft"/);
 });
 
 test("editing and cancellation are supported for all planning record types",()=>{
