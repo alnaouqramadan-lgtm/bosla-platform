@@ -23,6 +23,7 @@ function roleLabel(facilitator:boolean,recorder:boolean,inGroup:boolean){
 export default function WorkshopPage(){
  const {id}=useParams<{id:string}>();const router=useRouter();
  const[userId,setUserId]=useState("");const[workshop,setWorkshop]=useState<Workshop|null>(null);
+ const[organizationName,setOrganizationName]=useState("");
  const[groups,setGroups]=useState<Group[]>([]);const[participants,setParticipants]=useState<Participant[]>([]);
  const[answers,setAnswers]=useState<Answer[]>([]);const[priorities,setPriorities]=useState<Priority[]>([]);const[votes,setVotes]=useState<Vote[]>([]);
  const[drafts,setDrafts]=useState<Record<string,string>>({});const[saveStatus,setSaveStatus]=useState<Record<string,string>>({});
@@ -65,6 +66,9 @@ export default function WorkshopPage(){
   if(w.error)throw w.error;
   if(!w.data){setWorkshop(null);return;}
   setWorkshop(w.data as Workshop);
+  const orgResult=await supabase.from("planning_organizations").select("name")
+   .eq("id",w.data.organization_id).maybeSingle();
+  setOrganizationName(orgResult.data?.name??w.data.title);
   setLoadStep("تحميل المجموعات وإجابات الورشة");
   const queries=await Promise.all([
    supabase.from("planning_groups").select("id,organization_id,workshop_id,name").eq("workshop_id",id).order("name"),
@@ -204,7 +208,7 @@ export default function WorkshopPage(){
    if(result.error)throw result.error;await refreshVotes();
   }catch(e){setError(err(e));}finally{setBusy(false);}}
  async function excel(){if(!workshop||!facilitator||busy)return;setBusy(true);setError("");
-  try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes,decisions,reviews);
+  try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes,decisions,reviews,organizationName);
    setNotice("تم تحضير Excel بالأوراق المصممة (1–3) لكل مجموعة، مع ملحق البيانات الأصلية.");
   }catch(e){setError(err(e));}finally{setBusy(false);}}
 
@@ -332,7 +336,7 @@ export default function WorkshopPage(){
  <h2>المخرجات النهائية للورشة</h2>
  <div className="toolbar no-print"><button className="primary" disabled={busy} onClick={()=>void excel()}>تصدير Excel</button>
  <button className="secondary" onClick={()=>window.print()}>حفظ PDF / طباعة النماذج</button></div>
- <WorksheetPrint workshop={workshop} answers={answers} groups={groups} participants={participants}/>
+ <WorksheetPrint workshop={workshop} answers={answers} groups={groups} participants={participants} organizationName={organizationName}/>
  <h3>النماذج المعتمدة</h3>
  {!reviews.some(r=>r.finalized_at)&&<p>لم يُعتمد نموذج كامل بعد.</p>}
  {reviews.filter(r=>r.finalized_at).map(r=><section key={r.stage}><h3>{STAGES[r.stage-1].name}</h3>
