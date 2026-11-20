@@ -10,6 +10,8 @@ function message(e:unknown){return e instanceof Error?e.message:String(e);}
 export default function PlansHome(){
  const router=useRouter();
  const [orgs,setOrgs]=useState<Organization[]>([]);
+ const [visibleOrgs,setVisibleOrgs]=useState<Organization[]>([]);
+ const [currentUserId,setCurrentUserId]=useState("");
  const [workshops,setWorkshops]=useState<Workshop[]>([]);
  const [plans,setPlans]=useState<StrategicPlan[]>([]);
  const [selectedOrg,setSelectedOrg]=useState("");
@@ -36,6 +38,8 @@ export default function PlansHome(){
   for(const r of [orgRes,planRes,workshopRes])if(r.error)throw r.error;
   const owned=(orgRes.data??[]).filter(o=>o.owner_id===auth.data.user!.id) as Organization[];
   setOrgs(owned);
+  setVisibleOrgs((orgRes.data??[]) as Organization[]);
+  setCurrentUserId(auth.data.user!.id);
   setSelectedOrg(current=>owned.some(o=>o.id===current)?current:owned[0]?.id??"");
   setPlans((planRes.data??[]) as StrategicPlan[]);
   setWorkshops((workshopRes.data??[]) as Workshop[]);
@@ -90,12 +94,22 @@ export default function PlansHome(){
    </form>}
   </section>
   <section className="card institutional-card">
+   <h2>الصلاحيات والعضوية</h2>
+   <p className="muted">لإضافة مستخدم مسجّل إلى مؤسسة، اطلب منه مشاركة معرف حسابه مع مالك المؤسسة. جميع أعضاء المؤسسات الجدد يمكنهم قراءة الخطط المعتمدة فقط، دون تعديلها.</p>
+   <details><summary>معرف حسابي — للمشاركة مع مالك المؤسسة</summary>
+    <input className="field" aria-label="معرف حسابي" readOnly dir="ltr" value={currentUserId}/>
+   </details>
+   {orgs.length>0&&<div className="institutional-actions">{orgs.map(o=>
+    <Link key={o.id} className="chip" href={"/organizations/"+o.id+"/members"}>إدارة أعضاء {o.name}</Link>)}
+   </div>}
+  </section>
+  <section className="card institutional-card">
    <h2>خطط المؤسسة</h2>
-   {!loading&&!plans.length&&<p className="muted">لا توجد خطط محفوظة بعد. أنشئ أول مسودة من النموذج أعلاه.</p>}
+   {!loading&&!plans.length&&<p className="muted">لا توجد خطط متاحة لحسابك حاليًا. يعرض بوصلة للأعضاء الخطط المعتمدة فقط.</p>}
    <div className="institutional-plan-list">{plans.map(p=><Link className="institutional-plan-card" key={p.id} href={"/plans/"+p.id}>
     <span className="institutional-pill">{p.status==="approved"?"خطة معتمدة":"مسودة قيد الإعداد"}</span>
     <strong>{p.title}</strong>
-    <small>{orgs.find(o=>o.id===p.organization_id)?.name??"المؤسسة"} • {p.period_start} — {p.period_end}</small>
+    <small>{visibleOrgs.find(o=>o.id===p.organization_id)?.name??"المؤسسة"} • {p.period_start} — {p.period_end}</small>
     <span>{p.status==="approved"?"عرض الخطة ومتابعة تنفيذها":"فتح وتحرير الخطة"} ←</span>
    </Link>)}</div>
   </section>
