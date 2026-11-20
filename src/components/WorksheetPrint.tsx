@@ -42,13 +42,15 @@ function GridTable({columns,rows,min=4}:{
 }
 function Reality({g}: {g:WorksheetGroup}){
  const teams=worksheetPairs(g,1,"teams",4);
+ const counts=teams.map(p=>p[1]).filter(Boolean).map(Number);
+ const total=counts.length&&counts.every(Number.isFinite)?String(counts.reduce((a,b)=>a+b,0)):"";
  const scope=worksheetLines(g,1,"scope",4),locations=worksheetLines(g,1,"locations",4);
  const note=[worksheetValue(g,1,"resources")&&"الموارد: "+worksheetValue(g,1,"resources"),
   worksheetValue(g,1,"challenges")&&"التحديات: "+worksheetValue(g,1,"challenges")].filter(Boolean).join(" — ");
  return <article className="bosla-ws-page">
   <PageHeader g={g} number={1} title="أين نحن الآن؟" subtitle="تشخيص الواقع الحالي للهيئة"/>
   <div className="bosla-ws-grid bosla-ws-grid-three">
-   <Block title="1. الموارد البشرية الحالية"><GridTable columns={["الفريق / الجهة","عدد الأفراد"]} rows={teams.map(p=>[p[0],p[1]])}/></Block>
+   <Block title="1. الموارد البشرية الحالية"><GridTable columns={["الفريق / الجهة","عدد الأفراد"]} rows={[...teams.map(p=>[p[0],p[1]]),["الإجمالي",total]]} min={5}/></Block>
    <Block title="2. نطاق العمل والمواقع"><GridTable columns={["النطاق / المنطقة","أهم المواقع / أماكن العمل"]}
     rows={fill(scope,Math.max(scope.length,locations.length,4),"").map((v,i)=>[v,locations[i]??""])}/></Block>
    <Block title="3. الفئات المستهدفة" color="purple"><Lines checks values={worksheetLines(g,1,"target_groups")}/></Block>
