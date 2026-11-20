@@ -1,6 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import FormReviewPanel from "@/components/FormReviewPanel";
+import WorksheetPrint from "@/components/WorksheetPrint";
 import {reviewSource,type FormReview} from "@/lib/form-review";
 import Link from "next/link";
 import {useParams,useRouter} from "next/navigation";
@@ -327,10 +328,11 @@ export default function WorkshopPage(){
  })}
  <p className="muted">التصويت {workshop.vote_open?"مفتوح":"مغلق"} حاليًا</p>
  </section>}
- {showResults&&facilitator&&<section className="card">
+ {showResults&&facilitator&&<section className="card worksheet-print-host">
  <h2>المخرجات النهائية للورشة</h2>
  <div className="toolbar no-print"><button className="primary" disabled={busy} onClick={()=>void excel()}>تصدير Excel</button>
- <button className="secondary" onClick={()=>window.print()}>طباعة التقرير</button></div>
+ <button className="secondary" onClick={()=>window.print()}>حفظ PDF / طباعة النماذج</button></div>
+ <WorksheetPrint workshop={workshop} answers={answers} groups={groups} participants={participants}/>
  <h3>النماذج المعتمدة</h3>
  {!reviews.some(r=>r.finalized_at)&&<p>لم يُعتمد نموذج كامل بعد.</p>}
  {reviews.filter(r=>r.finalized_at).map(r=><section key={r.stage}><h3>{STAGES[r.stage-1].name}</h3>
