@@ -180,9 +180,9 @@ export default function InstitutionalPlan(){
    const chunks=groups.map(([label,key])=>{
     const item=fields[key];
     if(!item||item.status!=="approved")throw new Error("توجد خانات غير معتمدة في تحليل SWOT.");
-    return label+"\\n"+(item.content?.trim()||"");
+    return label+"\n"+(item.content?.trim()||"");
    });
-   const analysis=chunks.join("\\n\\n").replaceAll("\\n","\n");
+   const analysis=chunks.join("\n\n");
    const save=await supabase.from("planning_strategic_plans")
     .update({environmental_analysis:analysis}).eq("id",id).eq("organization_id",plan.organization_id)
     .select("id").single();
