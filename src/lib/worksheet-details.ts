@@ -1,5 +1,7 @@
-import type {WorksheetGroup} from "@/lib/worksheet-model";
-import {worksheetValue} from "@/lib/worksheet-model";
+import type {WorksheetGroup} from "./worksheet-model";
+function worksheetValue(g:WorksheetGroup,stage:number,key:string):string{
+  return g.values[stage+":"+key]??"";
+}
 
 export type ExecutionRow={
   number:number; activity:string; goal:string; audience:string; quantity:string;
