@@ -15,13 +15,16 @@ export type PlanRevision={
 };
 export type PlannedActivityBrief={id:string;planned_end:string|null};
 export function latestById<T extends {created_at:string;id:string}>(
- rows:T[],reference:(item:T)=>string
+ rows:T[],reference:(item:T)=>string,reportedOn?:(item:T)=>string
 ):Map<string,T>{
  const latest=new Map<string,T>();
  for(const row of rows){
   const key=reference(row),old=latest.get(key);
-  if(!old||row.created_at>old.created_at||
-   (row.created_at===old.created_at&&row.id>old.id))latest.set(key,row);
+  const date=reportedOn?.(row)??row.created_at;
+  const oldDate=old?(reportedOn?.(old)??old.created_at):"";
+  if(!old||date>oldDate||
+   (date===oldDate&&(row.created_at>old.created_at||
+    (row.created_at===old.created_at&&row.id>old.id))))latest.set(key,row);
  }
  return latest;
 }
@@ -30,7 +33,7 @@ export function deliveryOverview(
  reports:ActivityReport[],
  today:string
 ){
- const latest=latestById(reports,x=>x.activity_id);
+ const latest=latestById(reports,x=>x.activity_id,x=>x.report_date);
  let completed=0,overdue=0,withReports=0;
  for(const activity of activities){
   const report=latest.get(activity.id);
