@@ -1,3 +1,4 @@
+import {appendDesignedWorksheets} from "@/lib/designed-excel";
 import {reviewSource,type FormReview} from "@/lib/form-review";
 import type {Answer, Group,Participant,Priority,Vote,Workshop} from "@/lib/types";
 import {STAGES,fieldName,normalizeLine} from "@/lib/stages";
@@ -28,6 +29,7 @@ export async function exportWorkbook(
 ){
  const {default: ExcelJS}=await import("exceljs");
  const book=new ExcelJS.Workbook();book.creator="BOSLA AI";
+ appendDesignedWorksheets(book,workshop,reviews);
  const sources=(a:Answer)=>a.scope==="group"?groups.find(g=>g.id===a.owner_id)?.name||"—":
   participants.find(p=>p.user_id===a.owner_id)?.display_name||"—";
  const total=STAGES.reduce((sum,stage)=>sum+stage.fields.length,0);
