@@ -62,3 +62,14 @@ test("approval and monitoring must remain separate from unapproved drafts",()=>{
  assert.match(detail,/مسودة غير معتمدة/);
  assert.match(detail,/تسجيل الإنجازات وإقرار الخطة ونشر الإصدارات النهائية غير مفعّل/);
 });
+
+test("editing and cancellation are supported for all planning record types",()=>{
+ for(const marker of ["editingGoalId","editingActivityId","editingKpiId",
+  "beginGoalEdit","beginActivityEdit","beginKpiEdit",
+  "حفظ تعديل الهدف","حفظ تعديل النشاط","حفظ تعديل المؤشر",
+  "إلغاء التعديل"]){
+  assert.ok(detail.includes(marker),"missing "+marker);
+ }
+ assert.match(detail,/\.update\(data\)/);
+ assert.match(detail,/\.eq\("plan_id",id\)/);
+});
