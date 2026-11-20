@@ -24,7 +24,7 @@ test("three RTL workshop templates exist for both exports",()=>{
 test("group exports are isolated and original answer sheets remain intact",()=>{
  assert.match(model,/a\.scope!=="group"/);
  assert.match(model,/a\.owner_id!==g\.id/);
- assert.match(excel,/worksheetGroups\(workshop,answers,groups,participants\)/);
+ assert.match(excel,/worksheetGroups\(workshop,answers,groups,participants,organizationName\)/);
  assert.match(excel,/"الإجابات الأصلية"/);
  assert.match(excel,/"النماذج المعتمدة"/);
  assert.match(excel,/"الأولويات والتصويت"/);
