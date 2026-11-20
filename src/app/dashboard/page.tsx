@@ -62,6 +62,13 @@ export default function Dashboard(){
  <div><h1 className="title">🧭 بوصلة | BOSLA AI</h1><p>مرحبًا، {myName}</p></div>
  <button className="secondary no-print" onClick={()=>void logout()}>خروج</button>
  </header>
+ <section className="card institutional-card" style={{border:"1px solid #bdd6ef",background:"linear-gradient(115deg,#f1f7ff,#ffffff)"}}>
+  <div className="toolbar" style={{justifyContent:"space-between",gap:15}}>
+   <div><h2 style={{margin:"0 0 8px",color:"#0a3b75"}}>منصة الخطط المؤسسية</h2>
+    <p className="muted" style={{margin:0}}>أنشئ خطة استراتيجية وتشغيلية، واربط الأنشطة والمؤشرات بالأهداف، أو انطلق من ورشة تخطيط معتمدة.</p></div>
+   <Link href="/plans" className="primary" style={{textDecoration:"none",display:"inline-flex",alignItems:"center"}}>فتح الخطط المؤسسية</Link>
+  </div>
+ </section>
  {error&&<p className="error" role="alert">{error}</p>}{notice&&<p className="good" role="status">{notice}</p>}
  {loading&&<p>جارٍ التحميل...</p>}
  {platformAdmin&&<><div className="two-cols">
@@ -85,7 +92,7 @@ export default function Dashboard(){
  </form>
  </section>
  </>}
- <section className="card"><h2>ورشك المتاحة</h2>
+ <section className="card"><h2>ورش التخطيط التشاركي</h2>
  {!loading&&workshops.length===0&&<p>{platformAdmin?"لا توجد ورش متاحة بعد.":"ستظهر ورشتك هنا بعد أن يضيفك مدير بوصلة إليها."}</p>}
  <div className="two-cols">{workshops.map(w=><Link key={w.id} href={"/workshops/"+w.id} className="chip" style={{display:"block",textDecoration:"none",minHeight:95}}>
  <strong>{w.title}</strong><p className="muted">{w.planning_year} | {w.workshop_date} | {w.status==="active"?"نشطة":"مؤرشفة"}</p>
