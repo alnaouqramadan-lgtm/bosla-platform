@@ -1,4 +1,5 @@
 import type {ReactNode} from "react";
+import {executionRows,performanceRows,impactForGroup,followupForGroup,worksheetDataNote} from "@/lib/worksheet-details";
 import type {Answer,Group,Participant,Workshop} from "@/lib/types";
 import {
   worksheetGroups,worksheetLines,worksheetPairs,worksheetValue,type WorksheetGroup
@@ -101,10 +102,61 @@ function Goals({g}:{g:WorksheetGroup}){
    <span>{ordered.map((v,i)=><span key={i}>{i+1}. {v||".............................."}　</span>)}</span></div>
  </article>;
 }
+
+function DetailPanels({items}:{items:{title:string;values:string[];color:string}[]}){
+  return <div className="bosla-ws-grid bosla-ws-grid-three bosla-ws-detail-panels">
+    {items.map(item=><Block key={item.title} title={item.title} color={item.color}>
+      <Lines count={5} values={item.values} checks/>
+    </Block>)}
+  </div>;
+}
+function Execution({g}:{g:WorksheetGroup}){
+  const rows=executionRows(g);
+  return <article className="bosla-ws-page bosla-ws-detail-page">
+    <PageHeader g={g} number={4} title="كيف سنحقق أهدافنا؟"
+      subtitle="تحديد البرامج والمشاريع والأنشطة لتنفيذ الأهداف"/>
+    <h3 className="bosla-ws-detail-caption">الخطة التنفيذية المقترحة لعام {g.planningYear}</h3>
+    <GridTable min={5} columns={["رقم","المشروع / النشاط","الهدف المرتبط (من ورقة 3)",
+      "الفئة المستهدفة","الكمية المستهدفة","فترة التنفيذ","المسؤول","التكلفة التقديرية"]}
+      rows={rows.map(r=>[String(r.number),r.activity,r.goal,r.audience,
+        r.quantity,r.period,r.manager,r.cost])}/>
+    <DetailPanels items={[
+      {title:"متطلبات النجاح",values:[],color:"purple"},
+      {title:"المخاطر المحتملة",values:[],color:"gold"},
+      {title:"مؤشرات التنفيذ والمتابعة",values:[],color:"green"}
+    ]}/>
+    <div className="bosla-ws-summary"><strong>أهم 3 أنشطة ذات أولوية (توصية المجموعة):</strong>
+      <span>1. ........................　 2. ........................　 3. ........................</span>
+    </div>
+    <p className="bosla-ws-detail-note">{worksheetDataNote}</p>
+  </article>;
+}
+function Performance({g}:{g:WorksheetGroup}){
+  const rows=performanceRows(g);
+  return <article className="bosla-ws-page bosla-ws-detail-page">
+    <PageHeader g={g} number={5} title="كيف نعرف أننا نجحنا؟"
+      subtitle="تحديد مؤشرات الأداء وقياس النتائج"/>
+    <h3 className="bosla-ws-detail-caption">مؤشرات النجاح لأهدافنا لعام {g.planningYear}</h3>
+    <GridTable min={5} columns={["رقم","الهدف (من ورقة 3)","مؤشر الأداء (كيف نقيس النجاح؟)",
+      "خط الأساس (الوضع الحالي)","المستهدف "+g.planningYear,"مصدر التحقق","دورية القياس"]}
+      rows={rows.map(r=>[String(r.number),r.goal,r.kpi,r.baseline,
+        r.target,r.verification,r.frequency])}/>
+    <DetailPanels items={[
+      {title:"آلية المتابعة والتقييم",values:followupForGroup(g),color:"purple"},
+      {title:"معايير الحكم على النجاح",values:[],color:"gold"},
+      {title:"النتائج المتوقعة والأثر",values:impactForGroup(g),color:"green"}
+    ]}/>
+    <div className="bosla-ws-summary"><strong>أهم 3 مؤشرات رئيسية للمتابعة المؤسسية:</strong>
+      <span>1. ........................　 2. ........................　 3. ........................</span>
+    </div>
+    <p className="bosla-ws-detail-note">{worksheetDataNote}</p>
+  </article>;
+}
+
 export default function WorksheetPrint({workshop,answers,groups,participants,organizationName}:Props){
  return <div className="bosla-worksheet-print" aria-label="أوراق العمل الجاهزة للطباعة">
   {worksheetGroups(workshop,answers,groups,participants,organizationName).map(g=><div key={g.id}>
-   <Reality g={g}/><Swot g={g}/><Goals g={g}/>
+   <Reality g={g}/><Swot g={g}/><Goals g={g}/><Execution g={g}/><Performance g={g}/>
   </div>)}
  </div>;
 }

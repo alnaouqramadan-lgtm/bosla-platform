@@ -82,3 +82,29 @@ textarea { resize:vertical; }
  .bosla-ws-goals-bottom { margin-top:3mm; }
  .bosla-ws-goals-bottom .bosla-ws-box { min-height:63mm; }
 }
+
+
+/* Detailed execution and performance worksheets (4 and 5). */
+@media print {
+ .bosla-ws-detail-page .bosla-ws-detail-caption {
+   margin:1mm 0 0; padding:3mm; background:#d9eefa;
+   border:1px solid #2686b5; border-radius:8px 8px 0 0;
+   text-align:center; font-size:15pt; color:#092044;
+ }
+ .bosla-ws-detail-page .bosla-ws-table {font-size:8pt; table-layout:fixed;}
+ .bosla-ws-detail-page .bosla-ws-table th {text-align:center; font-size:8pt; padding:2mm 0.8mm;}
+ .bosla-ws-detail-page .bosla-ws-table td {
+   font-size:8.2pt; height:12mm; vertical-align:middle;
+   padding:1.2mm 1mm; white-space:pre-wrap; overflow-wrap:anywhere;
+ }
+ .bosla-ws-detail-page .bosla-ws-table th:first-child,
+ .bosla-ws-detail-page .bosla-ws-table td:first-child {width:5%; text-align:center;}
+ .bosla-ws-detail-page .bosla-ws-table th:nth-child(2) {width:23%;}
+ .bosla-ws-detail-page .bosla-ws-detail-panels {margin-top:3mm;}
+ .bosla-ws-detail-page .bosla-ws-detail-panels .bosla-ws-box {min-height:42mm;}
+ .bosla-ws-detail-page .bosla-ws-detail-panels .bosla-ws-line {min-height:6mm;}
+ .bosla-ws-detail-page .bosla-ws-detail-note {font-size:7.5pt; color:#586c82; margin:2mm 0 0;}
+ .bosla-ws-detail-page .bosla-ws-summary strong {white-space:normal;}
+ .bosla-ws-detail-page {break-inside:auto;page-break-inside:auto;}
+ .bosla-ws-detail-page .bosla-ws-table tr {break-inside:avoid;page-break-inside:avoid;}
+}
