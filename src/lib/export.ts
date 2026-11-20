@@ -1,4 +1,4 @@
-import type {FormReview} from "@/lib/form-review";
+import {reviewSource,type FormReview} from "@/lib/form-review";
 import type {Answer, Group,Participant,Priority,Vote,Workshop} from "@/lib/types";
 import {STAGES,fieldName,normalizeLine} from "@/lib/stages";
 
@@ -34,7 +34,7 @@ export async function exportWorkbook(
  const sheets:{name:string;headings:string[];rows:(string|number)[][]}[]=[
   {name:"الورشة",headings:["البيان","القيمة"],rows:[["عنوان الورشة",workshop.title],["سنة التخطيط",workshop.planning_year],
    ["تاريخ الورشة",workshop.workshop_date],["عدد المجموعات",groups.length],["عدد المشاركين",participants.length]]},
-  {name:"النماذج المعتمدة",headings:["النموذج","الخانة","الصياغة المعتمدة","المجموعة المصدر","النص عند التبنّي","اعتمد النموذج","تاريخ الاعتماد"],rows:reviews.filter(r=>r.finalized_at).flatMap(r=>STAGES[r.stage-1].fields.map(f=>{const v=r.fields[f.key];return [STAGES[r.stage-1].name,f.title,v.content,v.group_name??"صياغة الميسّر",v.source_text??"",participants.find(p=>p.user_id===r.finalized_by)?.display_name??r.finalized_by??"",r.finalized_at??""]}))},
+  {name:"النماذج المعتمدة",headings:["النموذج","الخانة","الصياغة المعتمدة","مصدر الصياغة","النص عند التبنّي","اعتمد النموذج","تاريخ الاعتماد"],rows:reviews.filter(r=>r.finalized_at).flatMap(r=>STAGES[r.stage-1].fields.map(f=>{const v=r.fields[f.key];return [STAGES[r.stage-1].name,f.title,v.content,reviewSource(v),v.source_text??"",participants.find(p=>p.user_id===r.finalized_by)?.display_name??r.finalized_by??"",r.finalized_at??""]}))},
   {name:"القرارات المعتمدة",headings:["النموذج","القرار","اعتمد بواسطة"],rows:decisions.map(d=>[STAGES[d.stage-1].name,d.content,participants.find(p=>p.user_id===d.decided_by)?.display_name||d.decided_by])},
   {name:"الإجابات الأصلية",headings:["المرحلة","السؤال","المصدر","نوع الإدخال","الإجابة بالنص الأصلي","التحديث"],rows:answers.map(a=>[
    STAGES[a.stage-1]?.name||"—",fieldName(a.stage,a.field_key),sources(a),a.scope==="group"?"جماعي":"فردي",a.content,a.updated_at
