@@ -308,7 +308,9 @@ export default function WorkshopPage(){
   const key=draftKey(stage,f.key,scope,ownerId);
   const value=drafts[key]??answers.find(a=>a.stage===stage&&a.field_key===f.key&&a.scope===scope&&a.owner_id===ownerId)?.content??"";
   return <label key={f.key}><strong style={{display:"block",marginBottom:7}}>{f.title}</strong>
-  <textarea className="field" rows={3} disabled={!editable} maxLength={30000} placeholder=""
+  <textarea className="field" rows={3} disabled={!editable} maxLength={30000}
+   placeholder={stage===1&&f.key==="teams"?"مثال: فريق البرامج | 6 (فريق في كل سطر)":
+    stage===3&&f.key==="goal_priorities"?"اكتب أولوية كل هدف في سطر: مرتفع، متوسط، منخفض":""}
    value={value} onChange={e=>edit(f.key,e.target.value)} onBlur={()=>flush(f.key)}/>
   <small className={saveStatus[key]?.startsWith("فشل")?"error":"muted"} role="status">{saveStatus[key]||""}</small>
   </label>;
