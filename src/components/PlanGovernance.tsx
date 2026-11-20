@@ -2,15 +2,17 @@
 import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
 import {supabase} from "@/lib/supabase";
 import PlanTeamReview,{type PlanAccessRole} from "@/components/PlanTeamReview";
-import type {StrategicPlan,OperationalActivity,PerformanceIndicator} from "@/lib/institutional-planning";
+import PlanReadinessPanel from "@/components/PlanReadinessPanel";
+import type {ReadinessTab} from "@/lib/plan-readiness";
+import type {StrategicPlan,StrategicGoal,OperationalActivity,PerformanceIndicator} from "@/lib/institutional-planning";
 import {deliveryOverview,latestById,type ActivityReport,type KpiMeasurement,type PlanRevision} from "@/lib/progress-metrics";
 
 const err=(value:unknown)=>value instanceof Error?value.message:String(value);
 const fmt=(value:number|null|undefined)=>value==null?"—":new Intl.NumberFormat("ar",{maximumFractionDigits:2}).format(value);
-const today=()=>new Date().toLocaleDateString("en-CA");
-type Props={plan:StrategicPlan;role:PlanAccessRole;activities:OperationalActivity[];indicators:PerformanceIndicator[];onReload:()=>Promise<void>};
+const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
+type Props={plan:StrategicPlan;role:PlanAccessRole;goals:StrategicGoal[];activities:OperationalActivity[];indicators:PerformanceIndicator[];onReload:()=>Promise<void>;onNavigate:(tab:ReadinessTab)=>void};
 
-export default function PlanGovernance({plan,role,activities,indicators,onReload}:Props){
+export default function PlanGovernance({plan,role,goals,activities,indicators,onReload,onNavigate}:Props){
  const [revision,setRevision]=useState<PlanRevision|null>(null);
  const [activityReports,setActivityReports]=useState<ActivityReport[]>([]);
  const [kpiMeasurements,setKpiMeasurements]=useState<KpiMeasurement[]>([]);
@@ -82,7 +84,7 @@ export default function PlanGovernance({plan,role,activities,indicators,onReload
   }catch(e){setError(err(e));}finally{setBusy(false);}
  }
  async function saveMeasurement(event:FormEvent<HTMLFormElement>){
-  event.preventDefault();if(busy||plan.status!=="approved")return;
+  event.preventDefault();if(busy||!(role==="owner"||role==="editor")||plan.status!=="approved")return;
   setBusy(true);setError("");setNotice("");
   try{
    const actual=Number(value);
@@ -100,6 +102,7 @@ export default function PlanGovernance({plan,role,activities,indicators,onReload
  }
  return <section className="card institutional-card">
   <h2>حوكمة الخطة ومتابعة الإنجاز</h2>
+  {plan.status!=="approved"&&<PlanReadinessPanel plan={plan} goals={goals} activities={activities} indicators={indicators} onNavigate={onNavigate}/>}
   <PlanTeamReview plan={plan} role={role} onReload={onReload}/>
   {error&&<p role="alert" className="error">{error}</p>}
   {notice&&<p role="status" className="good">{notice}</p>}

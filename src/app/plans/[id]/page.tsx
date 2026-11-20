@@ -366,7 +366,7 @@ export default function InstitutionalPlan(){
     </div>}
    </article>)}</div>
   </section>}
-  {active==="governance"&&<PlanGovernance plan={plan} role={accessRole} activities={activities} indicators={indicators} onReload={load}/>}
+  {active==="governance"&&<PlanGovernance plan={plan} role={accessRole} goals={goals} activities={activities} indicators={indicators} onReload={load} onNavigate={setActive}/>}
   <footer className="card">
    <strong>ضوابط اعتماد الخطة</strong>
    <p className="muted">لدى مالك المؤسسة صلاحية الاعتماد النهائي بعد مراجعة مستقلة عند تعيين مراجع؛ وتُحفظ جميع قرارات المراجعة. يطّلع المشاهد على الخطط دون تعديل، ويستطيع المحرر تعديل المسودة ورفع قياسات الإنجاز. لا تُعدل النسخة المرجعية بعد الاعتماد. طلبات تغيير النسخ اللاحقة جزء من التطوير القادم.</p>
