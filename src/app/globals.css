@@ -167,3 +167,51 @@ textarea { resize:vertical; }
 .institutional-card details{border-top:1px solid #dce5f0;margin-top:20px;padding:12px 0}
 .institutional-card details summary{font-weight:700;cursor:pointer;color:#12376b}
 @media(max-width:760px){.institutional-followup-grid{grid-template-columns:1fr}}
+
+/* Standalone institutional period report: screen and A4 landscape printable content. */
+.bosla-report-page .bosla-report-print{background:#fff;border:1px solid #dae4ee;border-radius:14px;padding:24px;margin:17px 0 32px;color:#162d4a;direction:rtl}
+.bosla-report-heading{text-align:center;border-bottom:3px solid #0d6096;padding-bottom:14px;margin-bottom:18px}
+.bosla-report-heading h2{font-size:27px;color:#073668;margin:8px 0}
+.bosla-report-heading p{font-size:13px;line-height:1.75;margin:4px 0}
+.bosla-report-heading strong{font-size:17px}
+.bosla-report-print h3{color:#073668;border-bottom:1px solid #a3c8e6;padding-bottom:8px;margin:24px 0 12px}
+.bosla-report-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:12px 0}
+.bosla-report-stats>div{display:flex;flex-direction:column;gap:5px;align-items:center;text-align:center;background:#edf5fc;border:1px solid #d3e4f2;border-radius:9px;padding:13px}
+.bosla-report-stats strong{font-size:25px;color:#0a5185}
+.bosla-report-stats span{font-size:12px;line-height:1.5}
+.bosla-report-table-wrap{overflow-x:auto;max-width:100%}
+.bosla-report-table-wrap table{width:100%;border-collapse:collapse;min-width:850px;font-size:12px}
+.bosla-report-table-wrap th{background:#073668;color:#fff;text-align:right;padding:10px 8px;font-weight:700;border:1px solid #adc8de}
+.bosla-report-table-wrap td{padding:9px 8px;vertical-align:top;border:1px solid #ccdce9;overflow-wrap:anywhere;white-space:pre-wrap}
+.bosla-report-table-wrap tr:nth-child(even){background:#f3f7fb}
+.bosla-report-evidence{font-size:10px;color:#3e6380;margin-top:5px;overflow-wrap:anywhere}
+.bosla-report-note{font-size:12px;color:#536c82;line-height:1.9}
+.bosla-report-warning{background:#fff5dc;color:#784700;border:1px solid #f5d181;border-radius:8px;padding:12px}
+.bosla-report-foot{border-top:1px solid #bdd3e6;margin-top:22px;padding-top:12px;font-size:11px;color:#526e86}
+@media(max-width:760px){
+ .bosla-report-page .bosla-report-print{padding:14px}
+ .bosla-report-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .bosla-report-heading h2{font-size:22px}
+}
+@page bosla-period-report {size:A4 landscape;margin:9mm}
+@media print{
+ .wrap.bosla-report-page > :not(.bosla-report-print){display:none!important}
+ .wrap.bosla-report-page > .bosla-report-print{
+  page:bosla-period-report;display:block!important;border:none!important;
+  margin:0!important;padding:0!important;box-shadow:none!important
+ }
+ .bosla-report-print .bosla-report-table-wrap{overflow:visible!important}
+ .bosla-report-print .bosla-report-table-wrap table{min-width:0!important;table-layout:fixed;font-size:8pt}
+ .bosla-report-print .bosla-report-table-wrap td{padding:2mm 1mm}
+ .bosla-report-print .bosla-report-table-wrap th{padding:2mm 1mm}
+ .bosla-report-print thead{display:table-header-group}
+ .bosla-report-print tr{page-break-inside:avoid;break-inside:avoid}
+ .bosla-report-print h3{page-break-after:avoid;break-after:avoid}
+ .bosla-report-stats{grid-template-columns:repeat(8,minmax(0,1fr));gap:1mm}
+ .bosla-report-stats>div{padding:2mm}
+ .bosla-report-stats strong{font-size:15pt}
+ .bosla-report-stats span{font-size:7pt}
+ .bosla-report-heading{padding-bottom:2mm;margin-bottom:3mm}
+ .bosla-report-heading h2{font-size:17pt}
+ .bosla-report-page .bosla-report-print{font-family:Tahoma,Arial,sans-serif}
+}

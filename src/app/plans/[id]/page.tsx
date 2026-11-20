@@ -243,6 +243,7 @@ export default function InstitutionalPlan(){
     <p>الفترة: {plan.period_start} — {plan.period_end}</p></div>
    <span className="institutional-pill">{plan.status==="approved"?"معتمدة من مالك المؤسسة":plan.status==="reviewed"?"راجَعها المراجع — تنتظر الاعتماد":plan.status==="in_review"?"تحت المراجعة":"مسودة غير معتمدة"}</span>
   </header>
+  {plan.status==="approved"&&<div className="institutional-actions"><Link className="primary" href={"/plans/"+id+"/reports"}>التقارير الشهرية والربع سنوية والسنوية • Excel / PDF</Link></div>}
   <div className="institutional-metrics">
    <div><strong>{goals.length}</strong><small>أهداف استراتيجية</small></div>
    <div><strong>{activities.length}</strong><small>أنشطة تشغيلية</small></div>
