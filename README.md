@@ -18,8 +18,8 @@
    - `NEXT_PUBLIC_SUPABASE_URL=https://madvrkqtducoivnaaldm.supabase.co`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY=<BOSLA publishable or legacy anon key>`
 3. **لا تضع مفاتيح `service_role` أو `sb_secret_` في متغيرات `NEXT_PUBLIC_`.**
-4. نفّذ `npm install` ثم `npm test` ثم `npm run typecheck` ثم `npm run build`.
-5. شغّل `npm run preflight` بعد ضبط الاتصال، وافحص `tests/ACCEPTANCE.md` قبل الاستخدام المؤسسي الواسع.
+4. نفّذ `npm ci` ثم `npm test` ثم `npm run typecheck` ثم `npm run build`.
+5. يعمل فحص الإعدادات تلقائيًا قبل بناء Vercel. لتشغيله محليًا استخدم `npm run preflight`، وافحص `tests/ACCEPTANCE.md` قبل الاستخدام المؤسسي الواسع.
 
 ## كيفية عمل النماذج
 - النماذج 1–3: تشخيص الواقع وتحليل SWOT والأهداف.
