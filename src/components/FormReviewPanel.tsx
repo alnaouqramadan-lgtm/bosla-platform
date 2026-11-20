@@ -3,14 +3,14 @@ import {useState} from "react";
 import {supabase} from "@/lib/supabase";
 import {STAGES} from "@/lib/stages";
 import type {Answer,Group} from "@/lib/types";
-import type {FormReview} from "@/lib/form-review";
+import {reviewSource,type FormReview} from "@/lib/form-review";
 
-type Draft={content:string;answer_id?:string;source_time?:string;group_name?:string;source_text?:string};
+type Draft={content:string;answer_id?:string;source_time?:string;group_name?:string;source_kind?:string;source_text?:string};
 type Props={
- workshopId:string;stage:number;active:boolean;groups:Group[];answers:Answer[];
+ facilitatorId?:string;workshopId:string;stage:number;active:boolean;groups:Group[];answers:Answer[];
  review?:FormReview;onSaved:(review:FormReview)=>void;
 };
-export default function FormReviewPanel({workshopId,stage,active,groups,answers,review,onSaved}:Props){
+export default function FormReviewPanel({facilitatorId,workshopId,stage,active,groups,answers,review,onSaved}:Props){
  const [drafts,setDrafts]=useState<Record<string,Draft>>({});
  const [suggestion,setSuggestion]=useState<{key:string;text:string;revision:number}|null>(null);
  const [suggesting,setSuggesting]=useState("");
@@ -53,13 +53,19 @@ export default function FormReviewPanel({workshopId,stage,active,groups,answers,
   }catch(e){setMessage(typeof e==="object"&&e&&"message" in e?String(e.message):"تعذّر الحفظ. حاول مجددًا.");}
   finally{setBusy(false);}
  }
- return <section className="card no-print"><h2>مراجعة إجابات المجموعات</h2>
+ return <section className="card no-print"><h2>مراجعة الإجابات واعتمادها</h2>
  <p>{review?.finalized_at?"النموذج معتمد":"الخانات المعتمدة"} · {approved} / {fields.length}</p>
  {fields.map(f=>{
   const saved=review?.fields[f.key];
   const draft=drafts[f.key]??saved??{content:""};
+  const own=answers.find(a=>a.stage===stage&&a.field_key===f.key&&a.scope==="individual"&&a.owner_id===facilitatorId);
   return <details key={f.key}><summary>{f.title} — {drafts[f.key]?"تعديل غير محفوظ":saved?.status==="approved"?"معتمدة":saved?"مسودة محفوظة":"بانتظار المراجعة"}</summary>
-  <div className="stack">{groups.map(g=>{
+  <div className="stack">
+  {own&&own.content.trim()&&<article className="card"><strong>الإدخال الفردي للميسّر</strong>
+   <p style={{whiteSpace:"pre-wrap"}}>{own.content}</p><small>آخر حفظ {new Date(own.updated_at).toLocaleString("ar")}</small>{" "}
+   {!review?.finalized_at&&<button className="secondary" disabled={locked} onClick={()=>change(f.key,{content:own.content,answer_id:own.id,source_time:own.updated_at,source_text:own.content,source_kind:"individual"})}>تبنَّ إدخالي الفردي</button>}
+  </article>}
+  {groups.map(g=>{
    const a=answers.find(a=>a.stage===stage&&a.field_key===f.key&&a.scope==="group"&&a.owner_id===g.id);
    return <article className="card" key={g.id}><strong>{g.name}</strong>
     <p style={{whiteSpace:"pre-wrap"}}>{a?.content.trim()||"بانتظار إجابة المجموعة"}</p>
@@ -69,7 +75,7 @@ export default function FormReviewPanel({workshopId,stage,active,groups,answers,
   })}</div>
   <label>صياغة الميسّر<textarea className="field" rows={3} value={draft.content} maxLength={30000} disabled={locked}
    onChange={e=>change(f.key,{...draft,content:e.target.value})}/></label>
-  {draft.group_name&&<details><summary>النص المتبنّى من {draft.group_name}</summary><p style={{whiteSpace:"pre-wrap"}}>{draft.source_text}</p></details>}
+  {draft.answer_id&&<details><summary>النص المتبنّى من {reviewSource(draft)}</summary><p style={{whiteSpace:"pre-wrap"}}>{draft.source_text}</p></details>}
   {!review?.finalized_at&&<div className="toolbar"><button className="secondary" disabled={locked||!drafts[f.key]?.content.trim()} onClick={()=>void save("draft",f.key)}>حفظ المسودة</button>
    {saved?.status==="draft"&&!drafts[f.key]&&<button className="secondary" disabled={locked} onClick={()=>void suggest(f.key)}>{suggesting===f.key?"جارٍ تحسين الصياغة…":"تعديل مقترح من الذكاء الاصطناعي"}</button>}
    <button className="primary" disabled={locked||!draft.content.trim()||(!drafts[f.key]&&saved?.status==="approved")} onClick={()=>void save("approve",f.key)}>اعتماد إجابة الخانة</button></div>}
