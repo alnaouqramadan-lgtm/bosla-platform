@@ -4,6 +4,7 @@ import {useParams,useRouter} from "next/navigation";
 import Link from "next/link";
 import {supabase} from "@/lib/supabase";
 import PlanGovernance from "@/components/PlanGovernance";
+import type {PlanAccessRole} from "@/components/PlanTeamReview";
 import {
  optionalNonnegative,optionalNumber,splitApprovedGoals,validatePlanPeriod,frequencyLabels,
  type StrategicPlan,type StrategicGoal,type OperationalActivity,type PerformanceIndicator
@@ -20,6 +21,7 @@ type Section="vision"|"goals"|"activities"|"indicators"|"governance";
 export default function InstitutionalPlan(){
  const {id}=useParams<{id:string}>();const router=useRouter();
  const [plan,setPlan]=useState<StrategicPlan|null>(null);
+ const [accessRole,setAccessRole]=useState<PlanAccessRole>("viewer");
  const [goals,setGoals]=useState<StrategicGoal[]>([]);
  const [activities,setActivities]=useState<OperationalActivity[]>([]);
  const [indicators,setIndicators]=useState<PerformanceIndicator[]>([]);
@@ -33,6 +35,7 @@ export default function InstitutionalPlan(){
  const [busy,setBusy]=useState(false);const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");const [notice,setNotice]=useState("");
  const [active,setActive]=useState<Section>("vision");
+ const canEdit=plan?.status==="draft"&&(accessRole==="owner"||accessRole==="editor");
  const load=useCallback(async()=>{
   const auth=await supabase.auth.getUser();
   if(auth.error)throw auth.error;
@@ -43,6 +46,16 @@ export default function InstitutionalPlan(){
   if(root.error)throw root.error;
   if(!root.data){setPlan(null);return;}
   const current=root.data as StrategicPlan;
+  const [orgResult,memberResult]=await Promise.all([
+   supabase.from("planning_organizations").select("owner_id").eq("id",current.organization_id).maybeSingle(),
+   supabase.from("planning_plan_members").select("role").eq("plan_id",id)
+    .eq("user_id",auth.data.user.id).maybeSingle()
+  ]);
+  if(orgResult.error)throw orgResult.error;
+  if(memberResult.error)throw memberResult.error;
+  const role:PlanAccessRole=orgResult.data?.owner_id===auth.data.user.id?
+   "owner":(memberResult.data?.role as PlanAccessRole|undefined)??"viewer";
+  setAccessRole(role);
   const [goalsRes,activityRes,indicatorRes]=await Promise.all([
    supabase.from("planning_strategic_goals").select("id,plan_id,organization_id,code,title,description,strategic_axis,priority,sort_order")
     .eq("plan_id",id).order("sort_order").order("created_at"),
@@ -65,7 +78,7 @@ export default function InstitutionalPlan(){
   .finally(()=>{if(mounted)setLoading(false);});return()=>{mounted=false;};},[load]);
 
  async function action(run:()=>Promise<string>){
-  if(!plan||plan.status!=="draft"||busy)return;
+  if(!plan||!canEdit||busy)return;
   setBusy(true);setError("");setNotice("");
   try{const success=await run();await load();setNotice(success);}
   catch(e){setError(err(e));}
@@ -156,7 +169,7 @@ export default function InstitutionalPlan(){
   setError("");
  }
  async function remove(kind:"goal"|"activity"|"indicator",rowId:string){
-  if(plan?.status!=="draft"){setError("الخطة معتمدة ولا يُسمح بتغيير سجلاتها.");return;}
+  if(!canEdit){setError("لا تملك صلاحية تعديل هذه الخطة في حالتها الحالية.");return;}
   const table=kind==="goal"?"planning_strategic_goals":kind==="activity"?"planning_operational_activities":"planning_performance_indicators";
   if(kind==="goal"&&(activities.some(a=>a.goal_id===rowId)||indicators.some(k=>k.goal_id===rowId))){
    setError("الهدف مرتبط بأنشطة أو مؤشرات. احذف الروابط أولًا قبل حذف الهدف.");return;
@@ -225,10 +238,10 @@ export default function InstitutionalPlan(){
  return <main className="wrap institutional-app" dir="rtl">
   <header className="institutional-hero">
    <div><Link href="/plans" className="institutional-back">← جميع الخطط</Link>
-    <p className="institutional-kicker">{plan.status==="approved"?"الخطة الاستراتيجية والتشغيلية المعتمدة":"مسودة خطة قيد الإعداد"}</p>
+    <p className="institutional-kicker">{plan.status==="approved"?"الخطة الاستراتيجية والتشغيلية المعتمدة":plan.status==="in_review"?"الخطة بانتظار المراجع":plan.status==="reviewed"?"الخطة بانتظار الاعتماد النهائي":"مسودة خطة قيد الإعداد"}</p>
     <h1>{plan.title}</h1>
     <p>الفترة: {plan.period_start} — {plan.period_end}</p></div>
-   <span className="institutional-pill">{plan.status==="approved"?"معتمدة بواسطة مالك المؤسسة":"مسودة غير معتمدة"}</span>
+   <span className="institutional-pill">{plan.status==="approved"?"معتمدة من مالك المؤسسة":plan.status==="reviewed"?"راجَعها المراجع — تنتظر الاعتماد":plan.status==="in_review"?"تحت المراجعة":"مسودة غير معتمدة"}</span>
   </header>
   <div className="institutional-metrics">
    <div><strong>{goals.length}</strong><small>أهداف استراتيجية</small></div>
@@ -246,11 +259,11 @@ export default function InstitutionalPlan(){
   {active==="vision"&&<section className="card institutional-card">
    <h2>الهوية والتوجه الاستراتيجي</h2>
    {plan.status==="approved"&&<p className="good">نسخة معتمدة ومقفلة للتعديل؛ تُعرض البيانات أدناه للقراءة.</p>}
-   {plan.status==="draft"&&plan.source_workshop_id&&<div className="institutional-actions">
+   {canEdit&&accessRole==="owner"&&plan.source_workshop_id&&<div className="institutional-actions">
     <button type="button" className="secondary" disabled={busy} onClick={()=>void importApprovedSwot()}>استيراد تحليل SWOT المعتمد من ورشة المصدر</button>
    </div>}
    <p className="muted">اكتب الصياغة المؤسسية المعتمدة للنقاش. هذه مسودة قابلة للتعديل وليست اعتمادًا رسميًا.</p>
-   {plan.status==="draft"?<form className="stack" onSubmit={saveDirection}>
+   {canEdit?<form className="stack" onSubmit={saveDirection}>
     <label>الرؤية<textarea rows={3} maxLength={6000} className="field" value={draft.vision} onChange={e=>setDraft(p=>({...p,vision:e.target.value}))}/></label>
     <label>الرسالة<textarea rows={3} maxLength={6000} className="field" value={draft.mission} onChange={e=>setDraft(p=>({...p,mission:e.target.value}))}/></label>
     <label>القيم المؤسسية<textarea rows={3} maxLength={6000} className="field" value={draft.institutional_values} onChange={e=>setDraft(p=>({...p,institutional_values:e.target.value}))}/></label>
@@ -264,11 +277,11 @@ export default function InstitutionalPlan(){
   </section>}
   {active==="goals"&&<section className="card institutional-card">
    <h2>الأهداف الاستراتيجية</h2>
-   {plan.status==="draft"&&plan.source_workshop_id&&<div className="institutional-actions">
+   {canEdit&&accessRole==="owner"&&plan.source_workshop_id&&<div className="institutional-actions">
     <button className="secondary" type="button" disabled={busy} onClick={()=>void importApprovedGoals()}>استيراد الأهداف المعتمدة من ورشة المصدر</button>
     <Link className="chip" href={"/workshops/"+plan.source_workshop_id}>فتح ورشة المصدر</Link>
    </div>}
-   {plan.status==="draft"&&<form className="institutional-form" onSubmit={createGoal}>
+   {canEdit&&<form className="institutional-form" onSubmit={createGoal}>
     <label>عنوان الهدف<input className="field" required minLength={3} maxLength={300} value={goal.title} onChange={e=>setGoal(p=>({...p,title:e.target.value}))}/></label>
     <label>المحور الاستراتيجي<input className="field" maxLength={300} value={goal.strategic_axis} onChange={e=>setGoal(p=>({...p,strategic_axis:e.target.value}))}/></label>
     <label>رمز الهدف<input className="field" maxLength={30} placeholder="G-01" value={goal.code} onChange={e=>setGoal(p=>({...p,code:e.target.value}))}/></label>
@@ -284,7 +297,7 @@ export default function InstitutionalPlan(){
    <div className="institutional-records">{goals.map(g=><article key={g.id} className="institutional-record">
     <div><span className="institutional-pill">{g.code||"هدف"} • أولوية {g.priority}</span><h3>{g.title}</h3>
      <small>{g.strategic_axis}</small><p>{g.description}</p></div>
-    {plan.status==="draft"&&<div className="institutional-actions">
+    {canEdit&&<div className="institutional-actions">
       <button className="secondary" disabled={busy} onClick={()=>beginGoalEdit(g)}>تعديل</button>
       <button className="secondary" disabled={busy} onClick={()=>void remove("goal",g.id)}>حذف</button>
     </div>}
@@ -292,7 +305,7 @@ export default function InstitutionalPlan(){
   </section>}
   {active==="activities"&&<section className="card institutional-card">
    <h2>الخطة التشغيلية وربط الأنشطة بالأهداف</h2>
-   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إدراج الأنشطة.</p>:plan.status==="draft"?<form className="institutional-form" onSubmit={createActivity}>
+   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إدراج الأنشطة.</p>:canEdit?<form className="institutional-form" onSubmit={createActivity}>
     <label className="institutional-span">الهدف المرتبط<select className="field" required value={activity.goal_id} onChange={e=>setActivity(p=>({...p,goal_id:e.target.value}))}>
      {goals.map(g=><option key={g.id} value={g.id}>{g.title}</option>)}</select></label>
     <label>اسم النشاط<input className="field" required minLength={3} maxLength={300} value={activity.title} onChange={e=>setActivity(p=>({...p,title:e.target.value}))}/></label>
@@ -318,7 +331,7 @@ export default function InstitutionalPlan(){
      <p><strong>الهدف:</strong> {goalName(a.goal_id)}</p>
      <small>{a.owner_name||"مسؤول غير محدد"} • {a.planned_start||"—"} إلى {a.planned_end||"—"}</small>
      <p>المستهدف: {n(a.target_quantity)} {a.target_unit} • التكلفة: {n(a.estimated_budget)} {a.currency_code}</p></div>
-    {plan.status==="draft"&&<div className="institutional-actions">
+    {canEdit&&<div className="institutional-actions">
      <button className="secondary" disabled={busy} onClick={()=>beginActivityEdit(a)}>تعديل</button>
      <button className="secondary" disabled={busy} onClick={()=>void remove("activity",a.id)}>حذف</button>
     </div>}
@@ -326,7 +339,7 @@ export default function InstitutionalPlan(){
   </section>}
   {active==="indicators"&&<section className="card institutional-card">
    <h2>مؤشرات قياس النجاح KPI</h2>
-   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إنشاء مؤشرات الأداء.</p>:plan.status==="draft"?<form className="institutional-form" onSubmit={createKpi}>
+   {!goals.length?<p className="error">أضف هدفًا استراتيجيًا أولًا قبل إنشاء مؤشرات الأداء.</p>:canEdit?<form className="institutional-form" onSubmit={createKpi}>
     <label className="institutional-span">الهدف الاستراتيجي<select required className="field" value={kpi.goal_id} onChange={e=>setKpi(p=>({...p,goal_id:e.target.value}))}>
      {goals.map(g=><option key={g.id} value={g.id}>{g.title}</option>)}</select></label>
     <label>اسم المؤشر<input required minLength={3} maxLength={300} className="field" value={kpi.title} onChange={e=>setKpi(p=>({...p,title:e.target.value}))}/></label>
@@ -346,16 +359,16 @@ export default function InstitutionalPlan(){
     <div><span className="institutional-pill">{frequencyLabels[k.frequency]}</span><h3>{k.title}</h3>
      <p><strong>الهدف:</strong> {goalName(k.goal_id)}</p>
      <small>خط الأساس: {n(k.baseline)} • المستهدف: {n(k.target)} {k.unit} • المصدر: {k.verification_source||"غير محدد"}</small></div>
-    {plan.status==="draft"&&<div className="institutional-actions">
+    {canEdit&&<div className="institutional-actions">
      <button className="secondary" disabled={busy} onClick={()=>beginKpiEdit(k)}>تعديل</button>
      <button className="secondary" disabled={busy} onClick={()=>void remove("indicator",k.id)}>حذف</button>
     </div>}
    </article>)}</div>
   </section>}
-  {active==="governance"&&<PlanGovernance plan={plan} activities={activities} indicators={indicators} onReload={load}/>}
+  {active==="governance"&&<PlanGovernance plan={plan} role={accessRole} activities={activities} indicators={indicators} onReload={load}/>}
   <footer className="card">
    <strong>ضوابط اعتماد الخطة</strong>
-   <p className="muted">هذه نسخة إعداد أولية. تُعتمد الخطة حاليًا بواسطة مالك المؤسسة، وتُقفل النسخة المرجعية. تُسجّل تحديثات التنفيذ والقياسات في سجل تاريخي، دون افتراض تحقق النتائج الاستراتيجية من عدد الأنشطة وحده. الاعتماد متعدد المستويات وطلبات تغيير النسخ اللاحقة من تطوير المرحلة التالية.</p>
+   <p className="muted">لدى مالك المؤسسة صلاحية الاعتماد النهائي بعد مراجعة مستقلة عند تعيين مراجع؛ وتُحفظ جميع قرارات المراجعة. يطّلع المشاهد على الخطط دون تعديل، ويستطيع المحرر تعديل المسودة ورفع قياسات الإنجاز. لا تُعدل النسخة المرجعية بعد الاعتماد. طلبات تغيير النسخ اللاحقة جزء من التطوير القادم.</p>
   </footer>
  </main>;
 }
