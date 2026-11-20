@@ -22,7 +22,8 @@ function safe(value:string|number|undefined|null):string|number{
  return /^[\s]*[=+\-@]/.test(text)?"'"+text:text;
 }
 export async function exportWorkbook(
- workshop:Workshop,answers:Answer[],groups:Group[],participants:Participant[],priorities:Priority[],votes:Vote[]
+ workshop:Workshop,answers:Answer[],groups:Group[],participants:Participant[],priorities:Priority[],votes:Vote[],
+ decisions:{stage:number;content:string;decided_by:string}[]=[]
 ){
  const {default: ExcelJS}=await import("exceljs");
  const book=new ExcelJS.Workbook();book.creator="BOSLA AI";
@@ -32,6 +33,7 @@ export async function exportWorkbook(
  const sheets:{name:string;headings:string[];rows:(string|number)[][]}[]=[
   {name:"الورشة",headings:["البيان","القيمة"],rows:[["عنوان الورشة",workshop.title],["سنة التخطيط",workshop.planning_year],
    ["تاريخ الورشة",workshop.workshop_date],["عدد المجموعات",groups.length],["عدد المشاركين",participants.length]]},
+  {name:"القرارات المعتمدة",headings:["النموذج","القرار","اعتمد بواسطة"],rows:decisions.map(d=>[STAGES[d.stage-1].name,d.content,participants.find(p=>p.user_id===d.decided_by)?.display_name||d.decided_by])},
   {name:"الإجابات الأصلية",headings:["المرحلة","السؤال","المصدر","نوع الإدخال","الإجابة بالنص الأصلي","التحديث"],rows:answers.map(a=>[
    STAGES[a.stage-1]?.name||"—",fieldName(a.stage,a.field_key),sources(a),a.scope==="group"?"جماعي":"فردي",a.content,a.updated_at
   ])},
