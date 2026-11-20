@@ -13,7 +13,7 @@ export type WorksheetGroup = {
 // Each group is rendered independently: the export must never attribute
 // one group's unapproved answer to another group.
 export function worksheetGroups(
-  workshop:Workshop,answers:Answer[],groups:Group[],participants:Participant[]
+  workshop:Workshop,answers:Answer[],groups:Group[],participants:Participant[],organizationName?:string
 ):WorksheetGroup[]{
   const items:(Group|null)[]=groups.length?groups:[null];
   return items.map((g,index)=>{
@@ -25,7 +25,7 @@ export function worksheetGroups(
     return {
       id:g?.id??"unassigned",number:index+1,name:g?.name??"غير محددة",
       members:participants.filter(p=>g?p.group_id===g.id:false).map(p=>p.display_name),
-      workshopTitle:workshop.title,planningYear:workshop.planning_year,values
+      workshopTitle:organizationName?.trim()||workshop.title,planningYear:workshop.planning_year,values
     };
   });
 }
