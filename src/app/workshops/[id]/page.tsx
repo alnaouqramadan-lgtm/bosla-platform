@@ -1,7 +1,7 @@
 "use client";
 import {useCallback,useEffect,useState,type FormEvent} from "react";
 import FormReviewPanel from "@/components/FormReviewPanel";
-import type {FormReview} from "@/lib/form-review";
+import {reviewSource,type FormReview} from "@/lib/form-review";
 import Link from "next/link";
 import {useParams,useRouter} from "next/navigation";
 import {supabase} from "@/lib/supabase";
@@ -310,7 +310,7 @@ export default function WorkshopPage(){
  })}</div>
  </section>}
  {facilitator&&!showResults&&<FormReviewPanel key={id+":"+stage} workshopId={id} stage={stage} active={workshop.status==="active"}
- groups={groups} answers={answers} review={reviews.find(r=>r.stage===stage)}
+ facilitatorId={userId} groups={groups} answers={answers} review={reviews.find(r=>r.stage===stage)}
  onSaved={saved=>setReviews(prev=>[...prev.filter(r=>r.stage!==saved.stage),saved].sort((a,b)=>a.stage-b.stage))}/>}
 
  {stage===2&&!showResults&&<section className="card no-print">
@@ -336,7 +336,7 @@ export default function WorkshopPage(){
  {reviews.filter(r=>r.finalized_at).map(r=><section key={r.stage}><h3>{STAGES[r.stage-1].name}</h3>
  {STAGES[r.stage-1].fields.map(f=><article key={f.key}><strong>{f.title}</strong>
  <p style={{whiteSpace:"pre-wrap"}}>{r.fields[f.key].content}</p>
- <small>{r.fields[f.key].group_name??"صياغة الميسّر"}</small></article>)}</section>)}
+ <small>{reviewSource(r.fields[f.key])}</small></article>)}</section>)}
  {decisions.length>0&&<h3>قرارات النموذج السابقة</h3>}
  {decisions.map(d=><article key={d.stage}><strong>{STAGES[d.stage-1].name}</strong><p style={{whiteSpace:"pre-wrap"}}>{d.content}</p><small>اعتمد بواسطة {participants.find(p=>p.user_id===d.decided_by)?.display_name||"ميسّر الورشة"}</small></article>)}
  <h3>المقترحات المتكررة</h3>
