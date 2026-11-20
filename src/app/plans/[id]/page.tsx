@@ -199,7 +199,7 @@ export default function InstitutionalPlan(){
  return <main className="wrap institutional-app" dir="rtl">
   <header className="institutional-hero">
    <div><Link href="/plans" className="institutional-back">← جميع الخطط</Link>
-    <p className="institutional-kicker">مسودة الخطة • الإصدار {plan.revision}</p>
+    <p className="institutional-kicker">مسودة خطة قيد الإعداد</p>
     <h1>{plan.title}</h1>
     <p>الفترة: {plan.period_start} — {plan.period_end}</p></div>
    <span className="institutional-pill">مسودة غير معتمدة</span>
