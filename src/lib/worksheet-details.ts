@@ -14,6 +14,15 @@ export type PerformanceRow={
 function lines(g:WorksheetGroup,stage:number,key:string):string[]{
   return worksheetValue(g,stage,key).split(/\r?\n/g).map(s=>s.trim()).filter(Boolean);
 }
+/** A blank *middle* line is a meaningful empty cell for a later table row.
+ * Removing it would shift all following values into the wrong activity/KPI. */
+export function alignedLines(g:WorksheetGroup,stage:number,key:string):string[]{
+  const source=worksheetValue(g,stage,key);
+  if(!source.trim())return [];
+  const rows=source.split(/\r?\n/g).map(s=>s.trim());
+  while(rows.length&&!rows[rows.length-1])rows.pop();
+  return rows;
+}
 function get(values:string[],i:number){return values[i]??"";}
 function combined(i:number,parts:{label:string;values:string[]}[]):string{
   return parts.map(p=>get(p.values,i)?p.label+": "+get(p.values,i):"").filter(Boolean).join(" | ");
@@ -22,10 +31,10 @@ function combined(i:number,parts:{label:string;values:string[]}[]):string{
 // Positionally align their entries for editable output, but never invent
 // a goal association, target quantity or measurement frequency.
 export function executionRows(g:WorksheetGroup):ExecutionRow[]{
-  const programs=lines(g,4,"programs"),projects=lines(g,4,"projects");
-  const activities=lines(g,4,"activities"),audience=lines(g,4,"beneficiaries");
-  const periods=lines(g,4,"timelines"),managers=lines(g,4,"responsibilities");
-  const costs=lines(g,4,"estimated_costs");
+  const programs=alignedLines(g,4,"programs"),projects=alignedLines(g,4,"projects");
+  const activities=alignedLines(g,4,"activities"),audience=alignedLines(g,4,"beneficiaries");
+  const periods=alignedLines(g,4,"timelines"),managers=alignedLines(g,4,"responsibilities");
+  const costs=alignedLines(g,4,"estimated_costs");
   const count=Math.max(5,programs.length,projects.length,activities.length,
     audience.length,periods.length,managers.length,costs.length);
   return Array.from({length:count},(_,i)=>({
@@ -37,8 +46,8 @@ export function executionRows(g:WorksheetGroup):ExecutionRow[]{
   }));
 }
 export function performanceRows(g:WorksheetGroup):PerformanceRow[]{
-  const kpis=lines(g,5,"kpis"),baseline=lines(g,5,"baselines");
-  const targets=lines(g,5,"targets"),verification=lines(g,5,"verification");
+  const kpis=alignedLines(g,5,"kpis"),baseline=alignedLines(g,5,"baselines");
+  const targets=alignedLines(g,5,"targets"),verification=alignedLines(g,5,"verification");
   const count=Math.max(5,kpis.length,baseline.length,targets.length,verification.length);
   return Array.from({length:count},(_,i)=>({
     number:i+1,goal:"",kpi:get(kpis,i),baseline:get(baseline,i),

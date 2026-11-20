@@ -347,6 +347,7 @@ export default function WorkshopPage(){
  </nav>
  {!showResults&&<section className="card no-print">
  <h2>{stage}. {STAGES[stage-1].name}</h2><p className="muted">{STAGES[stage-1].description}</p>
+ {(stage===4||stage===5)&&<p className="muted" role="note">عند إدخال قائمة الأنشطة أو المؤشرات، خصّص سطرًا لكل صف. إذا كانت إحدى الخانات بلا قيمة، اترك سطرها فارغًا للمحافظة على تطابق البيانات بين الأعمدة في التقارير.</p>}
  <p className={workshop.open_stages.includes(stage)?"good":"error"}>المرحلة {workshop.open_stages.includes(stage)?"مفتوحة":"مغلقة"}</p>
  <div className="toolbar" style={{marginBottom:20}}>
  <button className={scope==="group"?"primary":"secondary"} onClick={()=>setScope("group")}>عمل المجموعة</button>
@@ -363,7 +364,8 @@ export default function WorkshopPage(){
   return <label key={f.key}><strong style={{display:"block",marginBottom:7}}>{f.title}</strong>
   <textarea className="field" rows={3} disabled={!editable} maxLength={30000}
    placeholder={stage===1&&f.key==="teams"?"مثال: فريق البرامج | 6 (فريق في كل سطر)":
-    stage===3&&f.key==="goal_priorities"?"اكتب أولوية كل هدف في سطر: مرتفع، متوسط، منخفض":""}
+    stage===3&&f.key==="goal_priorities"?"اكتب أولوية كل هدف في سطر: مرتفع، متوسط، منخفض":
+    (stage===4||stage===5)?"اكتب قيمة كل صف في سطر منفصل، مع ترك سطر فارغ للخانة غير المتوفرة":" "}
    value={value} onChange={e=>edit(f.key,e.target.value)} onBlur={()=>flush(f.key)}/>
   <small className={saveStatus[key]?.startsWith("فشل")?"error":"muted"} role="status">{saveStatus[key]||""}</small>
   {saveStatus[key]?.startsWith("فشل")&&editable&&<button type="button" className="secondary"
