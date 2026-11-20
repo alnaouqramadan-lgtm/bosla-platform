@@ -57,7 +57,7 @@ test("period report uses last dated cumulative evidence, not sum, and never fabr
   'assert.equal(x.activityLines[0].flag,"overdue");',
   'assert.equal(x.activityLines[1].flag,"scheduled");',
   'assert.equal(x.activityLines[1].spent,null);',
-  'assert.equal(x.activityLines[2].flag,"overdue");',
+  'assert.equal(x.activityLines[2].flag,"overdue");\n  assert.equal(x.totals.unreported,1);',
   'assert.equal(x.totals.periodActivityUpdates,1);',
   'assert.equal(x.currencies.find(c=>c.currency==="ILS").planned,300);',
   'assert.equal(x.currencies.find(c=>c.currency==="ILS").spent,35);',
@@ -80,7 +80,7 @@ test("future plan period does not claim delivery or count unexpected KPI results
   'activities:[{id:"A",goal_id:"G",title:"نشاط",owner_name:"",planned_start:"2027-02-01",planned_end:"2027-02-10",target_quantity:null,target_unit:"",estimated_budget:null,currency_code:"ILS"}],',
   'indicators:[],reports:[],measurements:[],period:"year",year:2027,slot:1,today:"2026-11-20"});',
   'assert.equal(x.hasStarted,false);',
-  'assert.equal(x.activityLines[0].flag,"scheduled");',
+  'assert.equal(x.activityLines[0].flag,"future_period");',
   'assert.equal(x.activityLines[0].progress,null);',
   'console.log("ok");'
  ].join("\n")),"ok");
