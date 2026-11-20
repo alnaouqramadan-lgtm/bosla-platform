@@ -205,7 +205,7 @@ export default function WorkshopPage(){
   }catch(e){setError(err(e));}finally{setBusy(false);}}
  async function excel(){if(!workshop||!facilitator||busy)return;setBusy(true);setError("");
   try{await exportWorkbook(workshop,answers,groups,participants,priorities,votes,decisions,reviews);
-   setNotice("تم تحضير ملف Excel بأوراق منفصلة لكل مخرجات الورشة.");
+   setNotice("تم تحضير Excel بالأوراق المصممة (1–3) لكل مجموعة، مع ملحق البيانات الأصلية.");
   }catch(e){setError(err(e));}finally{setBusy(false);}}
 
  if(loading)return <main className="wrap"><section className="card">
