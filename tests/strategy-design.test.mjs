@@ -82,3 +82,14 @@ test("annual ceilings isolate currencies, preserve missing estimates and accept 
  assert.throws(()=>readDesign({...readDesign({}),annualPlans:[p,p]}));
  assert.equal(validAnnualPlan({...p,items:[...items,items[0]]}),false);
 });
+test("a board memo retains annual ceilings and unpriced commitments after a save round trip",async()=>{
+ const {boardDecisionMemo,annualBalance}=await import("../src/lib/strategy-design.ts");
+ const issue={id:"i",title:"سؤال",factorIds:[],impact:3,urgency:4,confidence:2};
+ const option={id:"o",issueId:"i",title:"خيار",internalId:"a",externalId:"b",scores:[3,4,3,2]};
+ const design={...readDesign({}),issues:[issue],options:[option],decision:{optionId:"o",reason:"مبرر",assumption:""}};
+ assert.deepEqual(boardDecisionMemo(design).annualPlans,[]);
+ const annual={year:2027,ceilings:{USD:100},items:[{activityId:"a",resources:"مدرب",currency:"USD",amount:null}]};
+ const saved=readDesign(JSON.parse(JSON.stringify({...design,annualPlans:[annual]})));
+ assert.deepEqual(boardDecisionMemo(saved).annualPlans,[annual]);
+ assert.equal(annualBalance(boardDecisionMemo(saved).annualPlans[0],"USD").status,"incomplete");
+});

@@ -109,7 +109,7 @@ export function boardDecisionMemo(design:Design){
  }));
  const factorIds=new Set([...issue.factorIds,selected.internalId,selected.externalId]);
  const factors=design.factors.filter(factor=>factorIds.has(factor.id));
- return {decision,selected,issue,weights,alternatives,factors,missingFactors:factorIds.size-factors.length};
+ return {decision,selected,issue,weights,alternatives,factors,annualPlans:design.annualPlans??[],missingFactors:factorIds.size-factors.length};
 }
 
 export function decisionGoals<T extends {id:string}>(decision:Decision,goals:T[]){
