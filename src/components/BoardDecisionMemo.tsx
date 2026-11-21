@@ -1,16 +1,17 @@
 "use client";
-import {boardDecisionMemo,criteria,readDesign} from "@/lib/strategy-design";
-import type {StrategicPlan} from "@/lib/institutional-planning";
+import {boardDecisionMemo,decisionGoals,criteria,readDesign} from "@/lib/strategy-design";
+import type {StrategicPlan,StrategicGoal} from "@/lib/institutional-planning";
 
 const statuses:Record<StrategicPlan["status"],string>={
  draft:"مسودة",in_review:"قيد المراجعة",reviewed:"تمت المراجعة وتنتظر الاعتماد",approved:"معتمدة"
 };
-export default function BoardDecisionMemo({plan,design}:{plan:StrategicPlan;design:unknown}){
+export default function BoardDecisionMemo({plan,design,goals}:{plan:StrategicPlan;design:unknown;goals:StrategicGoal[]}){
  let memo;
  try{memo=boardDecisionMemo(readDesign(design));}
  catch{return <p className="card error" role="alert">تعذّر عرض مذكرة القرار. راجع سجل بناء الاستراتيجية.</p>;}
  if(!memo)return <p className="card">تظهر مذكرة مجلس الإدارة هنا بعد أن يحفظ الفريق توصيته في تبويب بناء الاستراتيجية.</p>;
  const {issue,selected,decision,alternatives,factors,weights}=memo;
+ const {linked,missing}=decisionGoals(decision,goals);
  return <section dir="rtl" className="card board-decision-memo">
   <h2>مذكرة الاختيار الاستراتيجي لمجلس الإدارة</h2>
   <p><strong>{plan.title}</strong> · {plan.period_start} — {plan.period_end}</p>
@@ -20,6 +21,10 @@ export default function BoardDecisionMemo({plan,design}:{plan:StrategicPlan;desi
   <h3>توصية الفريق</h3><p><strong>{selected.title}</strong></p>
   <p>{decision.reason}</p>
   <p><strong>الافتراض المؤثر في القرار:</strong> {decision.assumption||"غير مسجل"}</p>
+  <h3>الأهداف الاستراتيجية المرتبطة بالتوصية</h3>
+  {linked.length>0?<ul>{linked.map(goal=><li key={goal.id}><strong>{goal.code} {goal.title}</strong>
+   {goal.description&&<p>{goal.description}</p>}</li>)}</ul>:<p>لم تُحدّد أهداف متاحة لهذه التوصية.</p>}
+  {missing>0&&<p>أهداف مرتبطة لم تعد متاحة في هذه الخطة: {missing}</p>}
   <h3>البدائل المدروسة لهذه القضية</h3>
   <div className="bosla-report-table-wrap"><table>
    <thead><tr><th>البديل</th>{criteria.map((c,i)=><th key={c}>{c} (الوزن {weights[i]})</th>)}<th>الدرجة المرجحة / 5</th></tr></thead>

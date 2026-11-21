@@ -1,13 +1,14 @@
 "use client";
 import {useState,type FormEvent} from "react";
 import {supabase} from "@/lib/supabase";
+import type {StrategicGoal} from "@/lib/institutional-planning";
 import StrategyDecision from "./StrategyDecision";
 import {methods,quadrants,readDesign,prepareWorkshop,sectorPreparation,type Factor,type Method,type Design} from "@/lib/strategy-design";
 
 const blankFactor=():Factor=>({id:"",method:"PESTEL",category:"سياسي",statement:"",quadrant:"فرصة",source:"",date:""});
 
-export default function StrategyDesign({planId,initial,stamp,editable,onSaved}:{
- planId:string;initial:unknown;stamp:string;editable:boolean;onSaved:(next:Design,time:string)=>void
+export default function StrategyDesign({planId,initial,stamp,editable,onSaved,goals}:{
+ goals:StrategicGoal[];planId:string;initial:unknown;stamp:string;editable:boolean;onSaved:(next:Design,time:string)=>void
 }){
  const [data,setData]=useState<Design|null>(()=>{try{return readDesign(initial);}catch{return null;}});
  const [timestamp,setTimestamp]=useState(stamp);
@@ -71,6 +72,6 @@ export default function StrategyDesign({planId,initial,stamp,editable,onSaved}:{
     {editable&&<button type="button" className="secondary" disabled={busy} onClick={()=>setFactor({...f})}>تعديل العامل</button>}
    </li>)}</ul>:<p className="muted">لم تُسجّل عوامل بعد.</p>}
   </section>)}
-  <StrategyDecision data={data} busy={busy} editable={editable} save={save}/>
+  <StrategyDecision goals={goals} data={data} busy={busy} editable={editable} save={save}/>
  </section>;
 }
