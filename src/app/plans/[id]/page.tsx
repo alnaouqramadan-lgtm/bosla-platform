@@ -4,6 +4,7 @@ import {useParams,useRouter} from "next/navigation";
 import Link from "next/link";
 import {supabase} from "@/lib/supabase";
 import StrategyDesign from "@/components/StrategyDesign";
+import BoardDecisionMemo from "@/components/BoardDecisionMemo";
 import PlanGovernance from "@/components/PlanGovernance";
 import type {PlanAccessRole} from "@/components/PlanTeamReview";
 import {
@@ -369,6 +370,7 @@ export default function InstitutionalPlan(){
     </div>}
    </article>)}</div>
   </section>}
+  {active==="governance"&&<BoardDecisionMemo plan={plan} design={design}/>}
   {active==="governance"&&<PlanGovernance plan={plan} role={accessRole} goals={goals} activities={activities} indicators={indicators} onReload={load} onNavigate={setActive}/>}
   <footer className="card">
    <strong>ضوابط اعتماد الخطة</strong>

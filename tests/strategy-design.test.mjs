@@ -44,3 +44,19 @@ test("team comparison keeps the institutional rating and distinguishes one team 
  assert.equal(readDesign(design).issues[0].teamRatings[0].impact,4);
  assert.throws(()=>readDesign({...design,issues:[{...issue,teamRatings:[{...first,urgency:6}]}]}));
 });
+test("board memo preserves the institution's choice, scopes alternatives and traces unique evidence",async()=>{
+ const {boardDecisionMemo}=await import("../src/lib/strategy-design.ts");
+ const design=readDesign({});
+ assert.equal(boardDecisionMemo(design),null);
+ const selected={id:"a",issueId:"q",title:"أ",internalId:"f1",externalId:"f2",scores:[1,2,2,2]};
+ const decision={optionId:"a",reason:"مبرر المؤسسة",assumption:"افتراض"};
+ const input={...design,decision,issues:[{id:"q",factorIds:["f1","missing"]}],
+  factors:[{id:"f2"},{id:"f1"},{id:"unrelated"}],weights:[1,0,0,0],
+  options:[selected,{...selected,id:"b",scores:[5,5,5,5]},{...selected,id:"c",issueId:"other"}]};
+ const memo=boardDecisionMemo(input);
+ assert.equal(memo.selected.id,"a");
+ assert.deepEqual(memo.alternatives.map(a=>a.score),[1,5]);
+ assert.deepEqual(memo.factors.map(f=>f.id),["f2","f1"]);
+ assert.equal(memo.missingFactors,1);
+ assert.throws(()=>boardDecisionMemo({...input,issues:[]}));
+});

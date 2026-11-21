@@ -230,3 +230,13 @@ textarea { resize:vertical; }
 .bosla-readiness-check p{font-size:12px;color:#5b6c7d;line-height:1.7;margin:5px 0}
 .bosla-readiness-check button{white-space:nowrap}
 @media(max-width:680px){.bosla-readiness-check{flex-wrap:wrap}.bosla-readiness-check button{margin-right:auto}}
+
+.board-decision-memo p,.board-decision-memo li{white-space:pre-wrap;overflow-wrap:anywhere}
+@page bosla-board-memo {size:A4 portrait;margin:14mm}
+@media print{
+ .wrap.institutional-app > .board-decision-memo{display:block!important;page:bosla-board-memo;break-inside:auto;border:none;padding:0}
+ .board-decision-memo .bosla-report-table-wrap{overflow:visible}
+ .board-decision-memo table{min-width:0;width:100%;table-layout:fixed;font-size:9pt}
+ .board-decision-memo h3{break-after:avoid}
+ .board-decision-memo tr{break-inside:avoid}
+}
