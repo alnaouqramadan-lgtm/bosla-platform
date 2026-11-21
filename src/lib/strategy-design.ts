@@ -136,5 +136,6 @@ export function annualBalance(plan:AnnualPlan,currency:AnnualCurrency){
  const missing=rows.filter(i=>i.amount===null).length;
  const ceiling=plan.ceilings[currency];
  const balance=ceiling===undefined?null:Math.round((ceiling-committed)*1000)/1000;
- return {committed,missing,balance,status:balance===null?"no_ceiling":balance<0?"over":missing?"incomplete":"within"};
+ const status=balance===null?"no_ceiling":balance<0?"over":missing?"incomplete":"within";
+ return {committed,missing,balance,status} as const;
 }
