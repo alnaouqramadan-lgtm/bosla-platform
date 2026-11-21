@@ -1,11 +1,12 @@
 "use client";
 import {useState} from "react";
+import type {StrategicGoal} from "@/lib/institutional-planning";
 import IssueTeamRatings from "./IssueTeamRatings";
-import {criteria,weightedScore,type Design} from "@/lib/strategy-design";
+import {criteria,weightedScore,decisionGoals,type Design} from "@/lib/strategy-design";
 
-type Props={data:Design;editable:boolean;busy:boolean;save:(next:Design)=>Promise<boolean>};
+type Props={goals:StrategicGoal[];data:Design;editable:boolean;busy:boolean;save:(next:Design)=>Promise<boolean>};
 const levels=[1,2,3,4,5];
-export default function StrategyDecision({data,editable,busy,save}:Props){
+export default function StrategyDecision({data,editable,busy,save,goals}:Props){
  const issues=data.issues??[],options=data.options??[];
  const [issueTitle,setIssueTitle]=useState("");
  const [links,setLinks]=useState<string[]>([]);
@@ -18,6 +19,7 @@ export default function StrategyDecision({data,editable,busy,save}:Props){
  const weights=data.weights??[25,25,25,25];
  const [trial,setTrial]=useState(weights);
  const [choice,setChoice]=useState(data.decision?.optionId??"");
+ const [goalIds,setGoalIds]=useState<string[]>(data.decision?.goalIds??[]);
  const [reason,setReason]=useState(data.decision?.reason??"");
  const [assumption,setAssumption]=useState(data.decision?.assumption??"");
  const internalFactors=data.factors.filter(f=>["قوة","ضعف"].includes(f.quadrant));
@@ -65,10 +67,15 @@ export default function StrategyDecision({data,editable,busy,save}:Props){
    </article>)}</section>)}
    <h3>مذكرة الاختيار الاستراتيجي</h3>
    {selected&&<article><strong>{selected.title}</strong><p>{data.decision?.reason}</p><p>الافتراض المطلوب مراجعته: {data.decision?.assumption||"غير مسجل"}</p></article>}
-   {editable&&<form className="stack" onSubmit={e=>{e.preventDefault();if(reason.trim())void save({...data,decision:{optionId:choice,reason:reason.trim(),assumption:assumption.trim()}});}}>
-    <label>البديل الموصى به<select required className="field" value={choice} onChange={e=>setChoice(e.target.value)}><option value="">اختر البديل</option>{options.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}</select></label>
+   {!editable&&data.decision&&<p>الأهداف المرتبطة: {decisionGoals(data.decision,goals).linked.map(g=>[g.code,g.title].filter(Boolean).join(" ")).join("، ")||"لم تُحدّد أهداف متاحة"}</p>}
+   {editable&&<form className="stack" onSubmit={e=>{e.preventDefault();if(reason.trim())void save({...data,decision:{optionId:choice,reason:reason.trim(),assumption:assumption.trim(),goalIds:goals.filter(g=>goalIds.includes(g.id)).map(g=>g.id)}});}}>
+    <label>البديل الموصى به<select required className="field" value={choice} onChange={e=>{setChoice(e.target.value);setGoalIds(e.target.value===data.decision?.optionId?data.decision.goalIds??[]:[]);}}><option value="">اختر البديل</option>{options.map(o=><option key={o.id} value={o.id}>{o.title}</option>)}</select></label>
     <label>أسباب الاختيار<textarea required className="field" maxLength={2000} value={reason} onChange={e=>setReason(e.target.value)}/></label>
     <label>افتراض مؤثر في القرار<textarea className="field" maxLength={1000} value={assumption} onChange={e=>setAssumption(e.target.value)}/></label>
+    <fieldset><legend>الأهداف التي تترجم هذا الاختيار</legend>
+     {goals.length===0&&<p>يمكن حفظ التوصية الآن، ثم إضافة أهداف من تبويب الأهداف وربطها هنا.</p>}
+     {goals.map(g=><label key={g.id}><input type="checkbox" checked={goalIds.includes(g.id)} onChange={e=>setGoalIds(ids=>e.target.checked?[...ids,g.id]:ids.filter(id=>id!==g.id))}/>{g.code} {g.title}</label>)}
+    </fieldset>
     <button className="primary" disabled={busy}>حفظ مذكرة الاختيار للمراجعة</button>
    </form>}
   </>}

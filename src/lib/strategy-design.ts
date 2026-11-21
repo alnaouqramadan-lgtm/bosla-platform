@@ -17,7 +17,7 @@ export function readDesign(value:unknown):Design{
     (i.teamRatings===undefined||(Array.isArray(i.teamRatings)&&i.teamRatings.every(t=>t&&typeof t.team==="string"&&t.team.trim().length>0&&typeof t.note==="string"&&[t.impact,t.urgency,t.confidence].every(rating))))));
   const optionsOk=d.options===undefined||(Array.isArray(d.options)&&d.options.every(o=>o&&[o.id,o.title,o.issueId,o.internalId,o.externalId].every(x=>typeof x==="string")&&Array.isArray(o.scores)&&o.scores.length===4&&o.scores.every(rating)));
   const weightsOk=d.weights===undefined||(Array.isArray(d.weights)&&d.weights.length===4&&d.weights.every(w=>Number.isFinite(w)&&w>=0&&w<=100)&&d.weights.some(w=>w>0));
-  const decisionOk=d.decision===undefined||(d.decision&&[d.decision.optionId,d.decision.reason,d.decision.assumption].every(x=>typeof x==="string"));
+  const decisionOk=d.decision===undefined||(d.decision&&(d.decision.goalIds===undefined||(Array.isArray(d.decision.goalIds)&&d.decision.goalIds.every(id=>typeof id==="string"&&id.length>0)))&&[d.decision.optionId,d.decision.reason,d.decision.assumption].every(x=>typeof x==="string"));
   const timeOk=d.workshopMinutes===undefined||validWorkshopMinutes(d.workshopMinutes);
   if(timeOk&&issuesOk&&optionsOk&&weightsOk&&decisionOk&&[d.route,d.sector,d.duration].every(x=>typeof x==="string") && Array.isArray(d.factors) &&
     d.factors.every(f=>f && Object.hasOwn(methods,f.method) &&
@@ -34,7 +34,7 @@ export function workshopAgenda(route:string){
 export type TeamRating={team:string;impact:number;urgency:number;confidence:number;note:string};
 export type Issue={teamRatings?:TeamRating[];id:string;title:string;factorIds:string[];impact:number;urgency:number;confidence:number};
 export type Option={id:string;title:string;issueId:string;internalId:string;externalId:string;scores:number[]};
-export type Decision={optionId:string;reason:string;assumption:string};
+export type Decision={goalIds?:string[];optionId:string;reason:string;assumption:string};
 export const criteria=["الأثر المتوقع","قابلية التنفيذ","توافر التمويل","القدرة على إدارة المخاطر"];
 export function weightedScore(scores:number[],weights:number[]){
  if(scores.length!==criteria.length||weights.length!==criteria.length||
@@ -110,4 +110,10 @@ export function boardDecisionMemo(design:Design){
  const factorIds=new Set([...issue.factorIds,selected.internalId,selected.externalId]);
  const factors=design.factors.filter(factor=>factorIds.has(factor.id));
  return {decision,selected,issue,weights,alternatives,factors,missingFactors:factorIds.size-factors.length};
+}
+
+export function decisionGoals<T extends {id:string}>(decision:Decision,goals:T[]){
+ const ids=new Set(decision.goalIds??[]);
+ const linked=goals.filter(goal=>ids.has(goal.id));
+ return {linked,missing:ids.size-linked.length};
 }

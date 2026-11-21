@@ -260,7 +260,7 @@ export default function InstitutionalPlan(){
    {([["strategy","بناء الاستراتيجية"],["vision","التوجه الاستراتيجي"],["goals","الأهداف"],["activities","الخطة التشغيلية"],["indicators","مؤشرات الأداء"],["governance","الاعتماد والمتابعة"]] as const)
     .map(([key,label])=><button key={key} className={active===key?"primary":"secondary"} onClick={()=>setActive(key)}>{label}</button>)}
   </nav>
-  {active==="strategy"&&<StrategyDesign key={plan.id} planId={plan.id} initial={design} stamp={plan.updated_at} editable={canEdit} onSaved={(next,time)=>{setDesign(next);setPlan({...plan,updated_at:time});}}/> }
+  {active==="strategy"&&<StrategyDesign goals={goals} key={plan.id} planId={plan.id} initial={design} stamp={plan.updated_at} editable={canEdit} onSaved={(next,time)=>{setDesign(next);setPlan({...plan,updated_at:time});}}/> }
   {active==="vision"&&<section className="card institutional-card">
    <h2>الهوية والتوجه الاستراتيجي</h2>
    {plan.status==="approved"&&<p className="good">نسخة معتمدة ومقفلة للتعديل؛ تُعرض البيانات أدناه للقراءة.</p>}
@@ -370,7 +370,7 @@ export default function InstitutionalPlan(){
     </div>}
    </article>)}</div>
   </section>}
-  {active==="governance"&&<BoardDecisionMemo plan={plan} design={design}/>}
+  {active==="governance"&&<BoardDecisionMemo goals={goals} plan={plan} design={design}/>}
   {active==="governance"&&<PlanGovernance plan={plan} role={accessRole} goals={goals} activities={activities} indicators={indicators} onReload={load} onNavigate={setActive}/>}
   <footer className="card">
    <strong>ضوابط اعتماد الخطة</strong>

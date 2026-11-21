@@ -60,3 +60,13 @@ test("board memo preserves the institution's choice, scopes alternatives and tra
  assert.equal(memo.missingFactors,1);
  assert.throws(()=>boardDecisionMemo({...input,issues:[]}));
 });
+test("decision goals resolve by identity and retain visibility of unavailable links",async()=>{
+ const {decisionGoals}=await import("../src/lib/strategy-design.ts");
+ const goals=[{id:"one",title:"هدف"},{id:"two",title:"هدف"}];
+ const decision={optionId:"o",reason:"مبرر",assumption:""};
+ assert.deepEqual(decisionGoals(decision,goals),{linked:[],missing:0});
+ const updated={...decision,goalIds:["two","gone","two"]};
+ assert.deepEqual(decisionGoals(updated,goals),{linked:[goals[1]],missing:1});
+ assert.equal(readDesign({...readDesign({}),decision:updated}).decision.goalIds[0],"two");
+ assert.throws(()=>readDesign({...readDesign({}),decision:{...decision,goalIds:[null]}}));
+});
