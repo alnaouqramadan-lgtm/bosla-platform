@@ -370,7 +370,7 @@ export default function InstitutionalPlan(){
     </div>}
    </article>)}</div>
   </section>}
-  {active==="governance"&&<BoardDecisionMemo goals={goals} plan={plan} design={design}/>}
+  {active==="governance"&&<BoardDecisionMemo activities={activities} goals={goals} plan={plan} design={design}/>}
   {active==="governance"&&<PlanGovernance plan={plan} role={accessRole} goals={goals} activities={activities} indicators={indicators} onReload={load} onNavigate={setActive}/>}
   <footer className="card">
    <strong>ضوابط اعتماد الخطة</strong>

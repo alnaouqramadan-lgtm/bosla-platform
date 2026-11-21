@@ -1,16 +1,18 @@
 "use client";
-import {boardDecisionMemo,decisionGoals,criteria,readDesign} from "@/lib/strategy-design";
-import type {StrategicPlan,StrategicGoal} from "@/lib/institutional-planning";
+import {boardDecisionMemo,decisionGoals,criteria,annualBalance,annualCurrencies,readDesign} from "@/lib/strategy-design";
+import type {StrategicPlan,StrategicGoal,OperationalActivity} from "@/lib/institutional-planning";
 
 const statuses:Record<StrategicPlan["status"],string>={
  draft:"مسودة",in_review:"قيد المراجعة",reviewed:"تمت المراجعة وتنتظر الاعتماد",approved:"معتمدة"
 };
-export default function BoardDecisionMemo({plan,design,goals}:{plan:StrategicPlan;design:unknown;goals:StrategicGoal[]}){
+export default function BoardDecisionMemo({plan,design,goals,activities}:{plan:StrategicPlan;design:unknown;goals:StrategicGoal[];activities:OperationalActivity[]}){
  let memo;
  try{memo=boardDecisionMemo(readDesign(design));}
  catch{return <p className="card error" role="alert">تعذّر عرض مذكرة القرار. راجع سجل بناء الاستراتيجية.</p>;}
  if(!memo)return <p className="card">تظهر مذكرة مجلس الإدارة هنا بعد أن يحفظ الفريق توصيته في تبويب بناء الاستراتيجية.</p>;
  const {issue,selected,decision,alternatives,factors,weights}=memo;
+ const activityById=new Map(activities.map(a=>[a.id,a]));
+ const goalById=new Map(goals.map(g=>[g.id,g.title]));
  const {linked,missing}=decisionGoals(decision,goals);
  return <section dir="rtl" className="card board-decision-memo">
   <h2>مذكرة الاختيار الاستراتيجي لمجلس الإدارة</h2>
@@ -36,5 +38,20 @@ export default function BoardDecisionMemo({plan,design,goals}:{plan:StrategicPla
    <p>{f.method} · {f.category} · {f.source||"يحتاج إلى مصدر"}{f.date?" · "+f.date:""}</p>
   </li>)}</ul>
   {memo.missingFactors>0&&<p>عوامل مرتبطة تعذّر العثور عليها: {memo.missingFactors}</p>}
+  {memo.annualPlans.slice().sort((a,b)=>a.year-b.year).map(annual=><section key={annual.year}>
+   <h3>التزامات الخطة السنوية {annual.year}</h3>
+   {annual.items.length===0?<p>لم تُدرج أنشطة لهذه السنة.</p>:<ul>{annual.items.map(item=>{
+    const activity=activityById.get(item.activityId);
+    return <li key={item.activityId}><strong>{activity?.title??"نشاط لم يعد متاحًا"}</strong>
+     {activity&&<p>الهدف: {goalById.get(activity.goal_id)??"غير متاح"} · المسؤول: {activity.owner_name||"غير محدد"}</p>}
+     <p>الموارد: {item.resources||"غير محددة"} · المخصص: {item.amount??"غير مقدّر"} {item.currency}</p></li>;
+   })}</ul>}
+   {annualCurrencies.filter(c=>annual.ceilings[c]!==undefined||annual.items.some(i=>i.currency===c)).map(c=>{
+    const line=annualBalance(annual,c);
+    return <p key={c}><strong>{c}</strong> · السقف: {annual.ceilings[c]??"غير محدد"} · المخصص المعلوم: {line.committed}
+     {line.balance!==null&&(" · "+(line.balance<0?"تجاوز السقف: ":"المتبقي بعد المخصصات المعلومة: ")+Math.abs(line.balance))}
+     {line.missing>0&&(" · أنشطة دون تقدير: "+line.missing)}</p>;
+   })}
+  </section>)}
  </section>;
 }
