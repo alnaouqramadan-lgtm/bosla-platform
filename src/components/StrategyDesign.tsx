@@ -1,14 +1,15 @@
 "use client";
 import {useState,type FormEvent} from "react";
 import {supabase} from "@/lib/supabase";
-import type {StrategicGoal} from "@/lib/institutional-planning";
+import AnnualPlanning from "./AnnualPlanning";
+import type {StrategicGoal,StrategicPlan,OperationalActivity} from "@/lib/institutional-planning";
 import StrategyDecision from "./StrategyDecision";
 import {methods,quadrants,readDesign,prepareWorkshop,sectorPreparation,type Factor,type Method,type Design} from "@/lib/strategy-design";
 
 const blankFactor=():Factor=>({id:"",method:"PESTEL",category:"سياسي",statement:"",quadrant:"فرصة",source:"",date:""});
 
-export default function StrategyDesign({planId,initial,stamp,editable,onSaved,goals}:{
- goals:StrategicGoal[];planId:string;initial:unknown;stamp:string;editable:boolean;onSaved:(next:Design,time:string)=>void
+export default function StrategyDesign({planId,initial,stamp,editable,onSaved,goals,plan,activities}:{
+ plan:StrategicPlan;activities:OperationalActivity[];goals:StrategicGoal[];planId:string;initial:unknown;stamp:string;editable:boolean;onSaved:(next:Design,time:string)=>void
 }){
  const [data,setData]=useState<Design|null>(()=>{try{return readDesign(initial);}catch{return null;}});
  const [timestamp,setTimestamp]=useState(stamp);
@@ -73,5 +74,6 @@ export default function StrategyDesign({planId,initial,stamp,editable,onSaved,go
    </li>)}</ul>:<p className="muted">لم تُسجّل عوامل بعد.</p>}
   </section>)}
   <StrategyDecision goals={goals} data={data} busy={busy} editable={editable} save={save}/>
+  <AnnualPlanning plan={plan} activities={activities} goals={goals} data={data} editable={editable} busy={busy} save={save}/>
  </section>;
 }

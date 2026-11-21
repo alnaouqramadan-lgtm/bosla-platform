@@ -70,3 +70,15 @@ test("decision goals resolve by identity and retain visibility of unavailable li
  assert.equal(readDesign({...readDesign({}),decision:updated}).decision.goalIds[0],"two");
  assert.throws(()=>readDesign({...readDesign({}),decision:{...decision,goalIds:[null]}}));
 });
+test("annual ceilings isolate currencies, preserve missing estimates and accept zero ceilings",async()=>{
+ const {annualBalance,validAnnualPlan}=await import("../src/lib/strategy-design.ts");
+ const entry=(activityId,currency,amount)=>({activityId,currency,amount,resources:""});
+ const items=[entry("a","USD",0.1),entry("b","USD",0.2),entry("c","ILS",50),entry("d","USD",null)];
+ const p={year:2027,ceilings:{USD:0.3,ILS:0},items};
+ assert.equal(validAnnualPlan(p),true);
+ assert.deepEqual(annualBalance(p,"USD"),{committed:0.3,missing:1,balance:0,status:"incomplete"});
+ assert.equal(annualBalance(p,"ILS").balance,-50);
+ assert.equal(annualBalance(p,"EUR").status,"no_ceiling");
+ assert.throws(()=>readDesign({...readDesign({}),annualPlans:[p,p]}));
+ assert.equal(validAnnualPlan({...p,items:[...items,items[0]]}),false);
+});

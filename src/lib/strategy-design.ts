@@ -6,7 +6,7 @@ export const methods = {
 export const quadrants = ["قوة","ضعف","فرصة","تهديد"] as const;
 export type Method = keyof typeof methods;
 export type Factor = {id:string; method:Method; category:string; statement:string; quadrant:string; source:string; date:string};
-export type Design = {route:string; sector:string; duration:string; workshopMinutes?:number; factors:Factor[];issues?:Issue[];options?:Option[];weights?:number[];decision?:Decision};
+export type Design = {annualPlans?:AnnualPlan[];route:string; sector:string; duration:string; workshopMinutes?:number; factors:Factor[];issues?:Issue[];options?:Option[];weights?:number[];decision?:Decision};
 export function readDesign(value:unknown):Design{
  const empty={route:"",sector:"",duration:"",factors:[]};
  if(value && typeof value==="object" && !Array.isArray(value)){
@@ -19,7 +19,7 @@ export function readDesign(value:unknown):Design{
   const weightsOk=d.weights===undefined||(Array.isArray(d.weights)&&d.weights.length===4&&d.weights.every(w=>Number.isFinite(w)&&w>=0&&w<=100)&&d.weights.some(w=>w>0));
   const decisionOk=d.decision===undefined||(d.decision&&(d.decision.goalIds===undefined||(Array.isArray(d.decision.goalIds)&&d.decision.goalIds.every(id=>typeof id==="string"&&id.length>0)))&&[d.decision.optionId,d.decision.reason,d.decision.assumption].every(x=>typeof x==="string"));
   const timeOk=d.workshopMinutes===undefined||validWorkshopMinutes(d.workshopMinutes);
-  if(timeOk&&issuesOk&&optionsOk&&weightsOk&&decisionOk&&[d.route,d.sector,d.duration].every(x=>typeof x==="string") && Array.isArray(d.factors) &&
+  if((d.annualPlans===undefined||(Array.isArray(d.annualPlans)&&d.annualPlans.every(validAnnualPlan)&&new Set(d.annualPlans.map(a=>a.year)).size===d.annualPlans.length))&&timeOk&&issuesOk&&optionsOk&&weightsOk&&decisionOk&&[d.route,d.sector,d.duration].every(x=>typeof x==="string") && Array.isArray(d.factors) &&
     d.factors.every(f=>f && Object.hasOwn(methods,f.method) &&
      [f.id,f.category,f.statement,f.quadrant,f.source,f.date].every(x=>typeof x==="string")))return d;
  }
@@ -116,4 +116,25 @@ export function decisionGoals<T extends {id:string}>(decision:Decision,goals:T[]
  const ids=new Set(decision.goalIds??[]);
  const linked=goals.filter(goal=>ids.has(goal.id));
  return {linked,missing:ids.size-linked.length};
+}
+
+export const annualCurrencies=["ILS","USD","EUR","JOD","EGP"] as const;
+export type AnnualCurrency=typeof annualCurrencies[number];
+export type AnnualItem={activityId:string;currency:AnnualCurrency;amount:number|null;resources:string};
+export type AnnualPlan={year:number;ceilings:Partial<Record<AnnualCurrency,number>>;items:AnnualItem[]};
+const validMoney=(value:unknown)=>typeof value==="number"&&Number.isFinite(value)&&value>=0&&value<=1e12;
+export function validAnnualPlan(p:AnnualPlan):boolean{
+ return !!p&&Number.isInteger(p.year)&&p.year>=1&&p.year<=9999&&!!p.ceilings&&typeof p.ceilings==="object"&&!Array.isArray(p.ceilings)
+  &&Object.entries(p.ceilings).every(([code,amount])=>annualCurrencies.some(c=>c===code)&&validMoney(amount))
+  &&Array.isArray(p.items)&&p.items.every(i=>i&&typeof i.activityId==="string"&&i.activityId.length>0&&annualCurrencies.includes(i.currency)
+   &&(i.amount===null||validMoney(i.amount))&&typeof i.resources==="string")
+  &&new Set(p.items.map(i=>i.activityId)).size===p.items.length;
+}
+export function annualBalance(plan:AnnualPlan,currency:AnnualCurrency){
+ const rows=plan.items.filter(i=>i.currency===currency);
+ const committed=Math.round(rows.reduce((sum,i)=>sum+(i.amount??0),0)*1000)/1000;
+ const missing=rows.filter(i=>i.amount===null).length;
+ const ceiling=plan.ceilings[currency];
+ const balance=ceiling===undefined?null:Math.round((ceiling-committed)*1000)/1000;
+ return {committed,missing,balance,status:balance===null?"no_ceiling":balance<0?"over":missing?"incomplete":"within"};
 }
