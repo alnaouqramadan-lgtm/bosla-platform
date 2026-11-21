@@ -95,3 +95,19 @@ export function teamSpread(rows:TeamRating[],axis:RatingAxis){
  const values=rows.map(r=>r[axis]);
  return Math.max(...values)-Math.min(...values);
 }
+
+export function boardDecisionMemo(design:Design){
+ const decision=design.decision;
+ if(!decision)return null;
+ const options=design.options??[];
+ const selected=options.find(option=>option.id===decision.optionId);
+ const issue=design.issues?.find(item=>item.id===selected?.issueId);
+ if(!selected||!issue)throw new Error("تعذّر ربط التوصية بالقضية أو البديل المحفوظ.");
+ const weights=design.weights??[25,25,25,25];
+ const alternatives=options.filter(option=>option.issueId===issue.id).map(option=>({
+  ...option,score:weightedScore(option.scores,weights)
+ }));
+ const factorIds=new Set([...issue.factorIds,selected.internalId,selected.externalId]);
+ const factors=design.factors.filter(factor=>factorIds.has(factor.id));
+ return {decision,selected,issue,weights,alternatives,factors,missingFactors:factorIds.size-factors.length};
+}
